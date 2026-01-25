@@ -62,7 +62,7 @@ export async function PUT(
         sponsor = ${sponsor || null},
         short_description = ${short_description || null},
         full_description = ${full_description || null},
-        item_images = ${parsedImages ? JSON.stringify(parsedImages) : null},
+        item_images = ${sql.json(parsedImages || [])},
         directions_url = ${directions_url || null},
         display_order = ${display_order || 0},
         updated_at = NOW()

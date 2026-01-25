@@ -64,7 +64,7 @@ export async function POST(request: Request, { params }: { params: { eventId: st
       VALUES (
         ${eventId}, ${name}, ${address || null}, ${sponsor || null}, 
         ${short_description || null}, ${full_description || null}, 
-        ${JSON.stringify(parsedImages)}, ${directions_url || null}, ${display_order || 0}
+        ${sql.json(parsedImages)}, ${directions_url || null}, ${display_order || 0}
       )
       RETURNING *
     `
