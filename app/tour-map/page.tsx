@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Navigation, MapPin, Loader2, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 interface Home {
   id: string
@@ -15,6 +16,9 @@ interface Home {
   short_description?: string
   display_order: number
   directions_url?: string
+  city?: string
+  state?: string
+  zip_code?: string
 }
 
 export default function TourMapPage() {
@@ -22,36 +26,24 @@ export default function TourMapPage() {
   const { toast } = useToast()
   const [homes, setHomes] = useState<Home[]>([])
   const [loading, setLoading] = useState(true)
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-  const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([])
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false)
+  const [googleMapsUrl, setGoogleMapsUrl] = useState<string>("")
 
-  // Load Google Maps script
-  useEffect(() => {
-    if (window.google?.maps) {
-      setIsScriptLoaded(true)
-      return
-    }
+  // Build Google Maps directions URL
+  const buildGoogleMapsUrl = useCallback((homesList: Home[]) => {
+    const homesWithAddresses = homesList.filter((h) => h.address)
+    if (homesWithAddresses.length === 0) return ""
 
-    const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}&libraries=places`
-    script.async = true
-    script.defer = true
-    script.onload = () => setIsScriptLoaded(true)
-    script.onerror = () => {
-      toast({
-        title: "Error",
-        description: "Failed to load Google Maps",
-        variant: "destructive",
-      })
-    }
-    document.head.appendChild(script)
+    const addresses = homesWithAddresses.map((h) => {
+      // Build full address string
+      const parts = [h.address]
+      if (h.city) parts.push(h.city)
+      if (h.state) parts.push(h.state)
+      if (h.zip_code) parts.push(h.zip_code)
+      return encodeURIComponent(parts.join(", "))
+    })
 
-    return () => {
-      document.head.removeChild(script)
-    }
-  }, [toast])
+    return `https://www.google.com/maps/dir/${addresses.join("/")}`
+  }, [])
 
   // Fetch homes
   useEffect(() => {
@@ -67,6 +59,7 @@ export default function TourMapPage() {
             (a: Home, b: Home) => a.display_order - b.display_order
           )
           setHomes(sortedHomes)
+          setGoogleMapsUrl(buildGoogleMapsUrl(sortedHomes))
         }
       } catch (error) {
         console.error("Error fetching homes:", error)
@@ -81,129 +74,20 @@ export default function TourMapPage() {
     }
 
     fetchHomes()
-  }, [event?.id, toast])
+  }, [event?.id, toast, buildGoogleMapsUrl])
 
-  // Initialize map
-  useEffect(() => {
-    if (!isScriptLoaded || !homes.length || map) return
 
-    const mapElement = document.getElementById("tour-map")
-    if (!mapElement) return
-
-    // Default to Dallas, TX
-    const defaultCenter = { lat: 32.8413, lng: -96.7781 }
-    
-    const newMap = new google.maps.Map(mapElement, {
-      zoom: 12,
-      center: defaultCenter,
-      mapTypeControl: true,
-      streetViewControl: true,
-      fullscreenControl: true,
-    })
-
-    const newDirectionsRenderer = new google.maps.DirectionsRenderer({
-      map: newMap,
-      suppressMarkers: true, // We'll add custom markers
-    })
-
-    setMap(newMap)
-    setDirectionsRenderer(newDirectionsRenderer)
-  }, [isScriptLoaded, homes, map])
-
-  // Add markers and route
-  useEffect(() => {
-    if (!map || !homes.length || !isScriptLoaded) return
-
-    // Clear existing markers
-    markers.forEach((marker) => marker.setMap(null))
-
-    const newMarkers: google.maps.Marker[] = []
-    const geocoder = new google.maps.Geocoder()
-    const bounds = new google.maps.LatLngBounds()
-
-    homes.forEach((home, index) => {
-      if (!home.address) return
-
-      geocoder.geocode({ address: home.address }, (results, status) => {
-        if (status === "OK" && results?.[0]) {
-          const position = results[0].geometry.location
-
-          const marker = new google.maps.Marker({
-            position,
-            map,
-            label: {
-              text: String.fromCharCode(65 + index), // A, B, C, etc.
-              color: "white",
-              fontSize: "14px",
-              fontWeight: "bold",
-            },
-            title: home.name,
-          })
-
-          const infoWindow = new google.maps.InfoWindow({
-            content: `
-              <div style="padding: 8px; max-width: 250px;">
-                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${home.name}</h3>
-                <p style="margin: 0 0 4px 0; font-size: 14px;">${home.address}</p>
-                ${home.sponsor ? `<p style="margin: 0; font-size: 12px; color: #666;">Sponsored by ${home.sponsor}</p>` : ""}
-              </div>
-            `,
-          })
-
-          marker.addListener("click", () => {
-            infoWindow.open(map, marker)
-          })
-
-          newMarkers.push(marker)
-          bounds.extend(position)
-
-          // Fit map to show all markers after last one is added
-          if (newMarkers.length === homes.filter((h) => h.address).length) {
-            map.fitBounds(bounds)
-          }
-        }
-      })
-    })
-
-    setMarkers(newMarkers)
-
-    // Draw route if we have at least 2 homes with addresses
-    const homesWithAddresses = homes.filter((h) => h.address)
-    if (homesWithAddresses.length >= 2 && directionsRenderer) {
-      const directionsService = new google.maps.DirectionsService()
-
-      const origin = homesWithAddresses[0].address
-      const destination = homesWithAddresses[homesWithAddresses.length - 1].address
-      const waypoints = homesWithAddresses.slice(1, -1).map((home) => ({
-        location: home.address,
-        stopover: true,
-      }))
-
-      directionsService.route(
-        {
-          origin,
-          destination,
-          waypoints,
-          travelMode: google.maps.TravelMode.DRIVING,
-          optimizeWaypoints: false, // Keep the display_order
-        },
-        (result, status) => {
-          if (status === "OK" && result) {
-            directionsRenderer.setDirections(result)
-          }
-        }
-      )
-    }
-  }, [map, homes, isScriptLoaded, directionsRenderer])
 
   const openInGoogleMaps = useCallback(() => {
-    const homesWithAddresses = homes.filter((h) => h.address)
-    if (homesWithAddresses.length === 0) return
+    if (googleMapsUrl) {
+      window.open(googleMapsUrl, "_blank")
+    }
+  }, [googleMapsUrl])
 
-    const addresses = homesWithAddresses.map((h) => encodeURIComponent(h.address)).join("/")
-    const url = `https://www.google.com/maps/dir/${addresses}`
-    window.open(url, "_blank")
-  }, [homes])
+  const getShortAddress = (home: Home) => {
+    // Extract just the street address without city/state/zip
+    return home.address.split(",")[0].trim()
+  }
 
   if (loading) {
     return (
@@ -226,66 +110,87 @@ export default function TourMapPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Map */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="p-0">
-                {!isScriptLoaded ? (
-                  <div className="h-[600px] flex items-center justify-center bg-muted">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : homes.filter((h) => h.address).length === 0 ? (
-                  <div className="h-[600px] flex flex-col items-center justify-center bg-muted gap-4">
-                    <AlertCircle className="h-12 w-12 text-muted-foreground" />
-                    <p className="text-muted-foreground">No homes with addresses available</p>
-                  </div>
-                ) : (
-                  <div id="tour-map" className="h-[600px] w-full rounded-lg" />
-                )}
-              </CardContent>
-            </Card>
+        <div className="grid lg:grid-cols-[300px_1fr] gap-6">
+          {/* Tour Stops Sidebar */}
+          <div className="space-y-6 order-2 lg:order-1">
+            <div className="space-y-2">
+              {homes.map((home, index) => (
+                <Link 
+                  key={home.id} 
+                  href={`/homes/${home.id}`}
+                  className="block group"
+                >
+                  <div className="flex items-center gap-3 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors">
+                    {/* Marker with connecting line */}
+                    <div className="relative flex flex-col items-center">
+                      {/* Connecting line (top) */}
+                      {index > 0 && (
+                        <div className="absolute -top-3 w-0.5 h-3 bg-primary/30" style={{ backgroundImage: 'repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 4px, transparent 4px, transparent 8px)' }} />
+                      )}
+                      
+                      {/* Marker */}
+                      <div className="relative z-10 w-10 h-10 rounded-full bg-background border-4 border-primary flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg font-bold text-primary">
+                          {String.fromCharCode(65 + index)}
+                        </span>
+                      </div>
 
-            {homes.filter((h) => h.address).length > 0 && (
-              <div className="mt-4 flex gap-4">
-                <Button onClick={openInGoogleMaps} className="flex-1" size="lg">
-                  <Navigation className="mr-2 h-5 w-5" />
-                  Open in Google Maps
-                </Button>
-              </div>
+                      {/* Connecting line (bottom) */}
+                      {index < homes.length - 1 && (
+                        <div className="absolute -bottom-3 w-0.5 h-3 bg-primary/30" style={{ backgroundImage: 'repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 4px, transparent 4px, transparent 8px)' }} />
+                      )}
+                    </div>
+
+                    {/* Address */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-lg font-bold uppercase tracking-wide group-hover:text-primary transition-colors">
+                        {home.address ? getShortAddress(home) : home.name}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Open in Google Maps Button */}
+            {googleMapsUrl && (
+              <Button onClick={openInGoogleMaps} className="w-full" size="lg">
+                <Navigation className="mr-2 h-5 w-5" />
+                Open in Google Maps
+              </Button>
             )}
           </div>
 
-          {/* Home List */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Tour Stops</h2>
-            <div className="space-y-3">
-              {homes.map((home, index) => (
-                <Card key={home.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                        {String.fromCharCode(65 + index)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm mb-1 truncate">{home.name}</h3>
-                        {home.address && (
-                          <p className="text-xs text-muted-foreground flex items-start gap-1">
-                            <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-2">{home.address}</span>
-                          </p>
-                        )}
-                        {home.sponsor && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Sponsored by {home.sponsor}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Map */}
+          <div className="order-1 lg:order-2">
+            <Card>
+              <CardContent className="p-0">
+                {loading ? (
+                  <div className="h-[600px] lg:h-[800px] flex items-center justify-center bg-muted">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : homes.filter((h) => h.address).length === 0 ? (
+                  <div className="h-[600px] lg:h-[800px] flex flex-col items-center justify-center bg-muted gap-4">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                    <p className="text-muted-foreground">No homes with addresses available</p>
+                  </div>
+                ) : googleMapsUrl ? (
+                  <iframe
+                    src={googleMapsUrl}
+                    className="h-[600px] lg:h-[800px] w-full rounded-lg"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <div className="h-[600px] lg:h-[800px] flex flex-col items-center justify-center bg-muted gap-4">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                    <p className="text-muted-foreground">Unable to generate map</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
