@@ -229,13 +229,13 @@ export function Navbar() {
               {auctionStatus === "live" && (
                 <>
                   <Clock className="h-4 w-4" />
-                  <span className="text-balance">Auction is Live • {timeLeft}</span>
+                  <span className="text-balance">Event is Live • {timeLeft}</span>
                 </>
               )}
               {auctionStatus === "not-started" && (
                 <>
                   <Clock className="h-4 w-4" />
-                  <span className="text-balance">Auction starts in {timeLeft}</span>
+                  <span className="text-balance">Event starts in {timeLeft}</span>
                 </>
               )}
               {auctionStatus === "ended" && (
