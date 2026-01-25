@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
+import { TestimonialCarousel } from "@/components/testimonial-carousel"
 
 export default function HomePage() {
   const { event, isLoading, isMainDomain } = useEvent()
@@ -243,44 +244,7 @@ export default function HomePage() {
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-wide">
           WHAT PEOPLE ARE SAYING ABOUT THE WRHT
         </h2>
-        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {[
-            {
-              quote:
-                "There are many great home tours in the North Texas area, but we value our collaborations with the White Rock Home Tour especially. Curated by a passionate group of volunteers on behalf of a worthy cause, the tour spotlights the residential architecture of one of Dallas' most interesting neighborhoods.",
-              author: "GREG BROWN",
-              title: "Dallas Center for Architecture",
-            },
-            {
-              quote:
-                "I am always excited to see what will be on the tour each year, it is always an excellent opportunity for increasing awareness and appreciation for our local residential architecture and design culture, specifically modern homes.",
-              author: "CLIFF WELCH, AIA",
-              title: "Welch Architecture",
-            },
-            {
-              quote:
-                "As a longtime resident of the White Rock Lake area, I can't think of a more vibrant community to live and work. Since living in the neighborhood, we haven't missed a single year of the White Rock Home Tour.",
-              author: "JENNIFER RILEY RICE, REALTOR",
-              title: "Heather Guild Group @ Compass",
-            },
-            {
-              quote:
-                "I was the Chair for the 2013 White Rock Home Tour while my daughter attended Hexter. It was a true highlight of being at Hexter and watching the talented planning team come together and have a lot of fun pulling off a very successful home tour that year.",
-              author: "DENNIS COLEMAN, REALTOR",
-              title: "Ebby Halliday",
-            },
-          ].map((testimonial, index) => (
-            <Card key={index} className="border-2 border-gray-900">
-              <CardContent className="p-6">
-                <blockquote className="text-gray-700 mb-4 italic leading-relaxed">
-                  "{testimonial.quote}"
-                </blockquote>
-                <div className="font-bold text-sm text-gray-900">{testimonial.author}</div>
-                <div className="text-sm text-gray-600">{testimonial.title}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {event?.id && <TestimonialCarousel eventId={event.id} autoAdvanceInterval={5 * 60 * 1000} />}
       </div>
 
       {/* Please Join Us Section */}
