@@ -194,6 +194,7 @@ export function Navbar() {
       ]
     : [
         { href: "/", label: "Home" },
+        { href: "/the-homes", label: "THE HOMES" },
         { href: "/history", label: "History" },
         ...(enableAuction ? [{ href: "/auctions", label: "Auction" }] : []), // Only show auction link if enableAuction is true
         ...(enableShop ? [{ href: "/shop", label: "Shop" }] : []), // Added shop navigation link conditionally
