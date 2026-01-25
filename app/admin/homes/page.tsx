@@ -148,14 +148,25 @@ export default function AdminHomesPage() {
     }
   }
 
-  const getFirstImage = (imageUrl: string | null) => {
-    if (!imageUrl) return "/placeholder.svg?height=200&width=200"
-    try {
-      const parsed = JSON.parse(imageUrl)
-      return Array.isArray(parsed) ? parsed[0] : imageUrl
-    } catch {
-      return imageUrl
+  const getFirstImage = (imageData: string | string[] | null | undefined) => {
+    if (!imageData) return null
+    
+    // If it's already an array, get the first item
+    if (Array.isArray(imageData)) {
+      return imageData.length > 0 ? imageData[0] : null
     }
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof imageData === 'string') {
+      try {
+        const parsed = JSON.parse(imageData)
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : imageData
+      } catch {
+        return imageData
+      }
+    }
+    
+    return null
   }
 
   const columns = [
@@ -309,7 +320,7 @@ export default function AdminHomesPage() {
                   className="relative aspect-square bg-muted"
                   onClick={() => handleEdit(home)}
                 >
-                  {home.item_images ? (
+                  {getFirstImage(home.item_images) ? (
                     <Image
                       src={getFirstImage(home.item_images) || "/placeholder.svg?height=200&width=200"}
                       alt={home.name}
