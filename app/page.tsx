@@ -283,19 +283,111 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gray-50 py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Please join us for our 17th year</h2>
-          <p className="text-lg text-gray-700 max-w-3xl mx-auto mb-8">
+      {/* Please Join Us Section */}
+      <div className="grid md:grid-cols-2 gap-0 min-h-[600px]">
+        {/* Left Content */}
+        <div className="bg-gray-100 p-8 md:p-16 flex flex-col justify-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight uppercase leading-tight">
+            Please join us for our 17th year
+          </h2>
+          <p className="text-lg text-gray-700 mb-8 leading-relaxed">
             of celebrating mid-century and modern residential architecture, interior design, and landscape design in
             East Dallas, all to benefit the students and teachers of DISD's Hexter Elementary.
           </p>
-          <Link href="/tickets">
-            <Button size="lg" className="text-lg px-8 py-6 font-bold">
-              BUY YOUR TICKETS
-            </Button>
-          </Link>
+          <div>
+            <Link href="/tickets">
+              <Button
+                variant="outline"
+                size="lg"
+                className="text-lg px-8 py-6 font-bold border-2 border-black bg-transparent hover:bg-black hover:text-white transition-colors"
+              >
+                BUY YOUR TICKETS
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Right Image */}
+        <div
+          className="bg-cover bg-center min-h-[400px] md:min-h-full"
+          style={{
+            backgroundImage: `url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-V90Rs19WJxTJlkV9IEAIbUAqM1zeKJ.png')`,
+          }}
+        />
+      </div>
+
+      {/* Sponsors Section */}
+      <div className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          {/* Header with decorative lines */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
+            <h2 className="text-xl md:text-2xl font-bold text-center whitespace-nowrap tracking-wide">
+              THE 17TH ANNUAL WRHT IS MADE POSSIBLE BY
+            </h2>
+            <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
+          </div>
+
+          {/* Presenting Sponsor */}
+          <div className="text-center mb-12">
+            <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">PRESENTING SPONSOR</p>
+            <div className="flex justify-center">
+              <img
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-nEOmELDrUNr4AbQavdwueLENQoQurl.png"
+                alt="Comerica Bank"
+                className="h-24 object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Modern and Media Sponsors */}
+          <div className="grid md:grid-cols-2 gap-12 mb-12 max-w-4xl mx-auto">
+            {/* Modern Sponsor */}
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">MODERN SPONSOR</p>
+              <div className="flex flex-col items-center gap-6">
+                <img
+                  src="/placeholder.svg?height=80&width=200"
+                  alt="Modern Sponsor"
+                  className="h-20 object-contain"
+                />
+                <img
+                  src="/placeholder.svg?height=60&width=200"
+                  alt="Ed Murchison"
+                  className="h-16 object-contain"
+                />
+                <img
+                  src="/placeholder.svg?height=60&width=200"
+                  alt="Coldwell Banker Realty"
+                  className="h-16 object-contain"
+                />
+              </div>
+            </div>
+
+            {/* Media Prime Sponsor */}
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">MEDIA PRIME SPONSOR</p>
+              <div className="flex justify-center">
+                <img
+                  src="/placeholder.svg?height=80&width=250"
+                  alt="Advocate Be Local"
+                  className="h-20 object-contain"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* More Sponsors Button */}
+          <div className="text-center">
+            <Link href="/sponsor">
+              <Button
+                size="lg"
+                className="bg-black hover:bg-gray-800 text-white px-12 py-6 text-base font-bold tracking-wide"
+              >
+                MORE SPONSORS + INFO HERE
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
