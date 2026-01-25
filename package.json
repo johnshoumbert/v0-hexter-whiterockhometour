@@ -42,6 +42,8 @@
     "@react-email/components": "latest",
     "@react-email/render": "^2.0.0",
     "@sendgrid/mail": "latest",
+    "@simplewebauthn/browser": "latest",
+    "@simplewebauthn/server": "latest",
     "@stripe/react-stripe-js": "latest",
     "@stripe/stripe-js": "latest",
     "@tiptap/core": "latest",

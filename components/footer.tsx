@@ -49,6 +49,11 @@ export function Footer() {
                   Home
                 </Link>
               </li>
+              <li>
+                <Link href="/history" className="text-muted-foreground hover:text-foreground">
+                  History
+                </Link>
+              </li>
               {enableAuction && (
                 <li>
                   <Link href="/auctions" className="text-muted-foreground hover:text-foreground">
