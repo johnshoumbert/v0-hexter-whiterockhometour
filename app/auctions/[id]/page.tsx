@@ -18,6 +18,7 @@ import { useEvent } from "@/contexts/event-context"
 import { toast } from "sonner"
 import { AuctionShareButton } from "@/components/auction-share-button"
 import { AuctionContactModal } from "@/components/auction-contact-modal"
+import { LoginModal } from "@/components/login-modal"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ export default function AuctionDetailPage() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [showEndAuctionDialog, setShowEndAuctionDialog] = useState(false)
   const [isEndingAuction, setIsEndingAuction] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -253,7 +255,7 @@ export default function AuctionDetailPage() {
 
   const handleLike = async () => {
     if (!user) {
-      toast.error("Please log in to like items")
+      setLoginModalOpen(true)
       return
     }
 
@@ -636,6 +638,7 @@ export default function AuctionDetailPage() {
                         onBidPlaced={handleBidPlaced}
                         hasEnded={hasAuctionEnded}
                         event={event}
+                        onLoginRequired={() => setLoginModalOpen(true)}
                       />
                     )}
                   </>
@@ -821,6 +824,15 @@ export default function AuctionDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Login Modal */}
+      <LoginModal
+        open={loginModalOpen}
+        onOpenChange={setLoginModalOpen}
+        onSuccess={() => {
+          fetchLikes()
+        }}
+      />
     </div>
   )
 }

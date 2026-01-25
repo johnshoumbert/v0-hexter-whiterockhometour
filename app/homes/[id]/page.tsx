@@ -11,13 +11,13 @@ import { useToast } from "@/hooks/use-toast"
 import { Heart, MapPin, Share2, ChevronLeft, ChevronRight, Trash2, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { ShareModal } from "@/components/share-modal"
+import { LoginModal } from "@/components/login-modal"
 
 interface Home {
   id: string
   name: string
   address: string
   sponsor: string
-  sponsor_id?: string
   short_description: string
   full_description: string
   item_images: string[]
@@ -48,6 +48,7 @@ export default function HomeDetailPage() {
   const [hasLiked, setHasLiked] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   useEffect(() => {
     fetchHomeDetails()
@@ -57,12 +58,9 @@ export default function HomeDetailPage() {
 
   const fetchHomeDetails = async () => {
     try {
-      console.log("[v0] Fetching home details for ID:", params.id)
       const res = await fetch(`/api/homes/${params.id}`)
       if (res.ok) {
         const data = await res.json()
-        console.log("[v0] Home data received:", data)
-        
         // Parse item_images if it's a JSON string
         const parsedHome = {
           ...data,
@@ -72,24 +70,10 @@ export default function HomeDetailPage() {
             ? data.item_images
             : []
         }
-        
-        // If sponsor_id exists but no sponsor name, fetch it
-        if (parsedHome.sponsor_id && !parsedHome.sponsor) {
-          try {
-            const sponsorRes = await fetch(`/api/sponsors/${parsedHome.sponsor_id}`)
-            if (sponsorRes.ok) {
-              const sponsorData = await sponsorRes.json()
-              parsedHome.sponsor = sponsorData.sponsor?.name || null
-            }
-          } catch (error) {
-            console.error("[v0] Error fetching sponsor:", error)
-          }
-        }
-        
         setHome(parsedHome)
       }
     } catch (error) {
-      console.error("[v0] Error fetching home:", error)
+      console.error("Error fetching home:", error)
       toast({
         title: "Error",
         description: "Failed to load home details",
@@ -139,11 +123,7 @@ export default function HomeDetailPage() {
 
   const handleCommentSubmit = async () => {
     if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to comment",
-        variant: "destructive",
-      })
+      setLoginModalOpen(true)
       return
     }
 
@@ -217,11 +197,7 @@ export default function HomeDetailPage() {
 
   const handleLike = async () => {
     if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to like homes",
-        variant: "destructive",
-      })
+      setLoginModalOpen(true)
       return
     }
 
@@ -502,6 +478,16 @@ export default function HomeDetailPage() {
           description={home.short_description || home.full_description}
         />
       )}
+
+      {/* Login Modal */}
+      <LoginModal
+        open={loginModalOpen}
+        onOpenChange={setLoginModalOpen}
+        onSuccess={() => {
+          fetchLikes()
+          fetchComments()
+        }}
+      />
     </div>
   )
 }

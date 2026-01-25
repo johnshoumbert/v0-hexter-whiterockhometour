@@ -445,16 +445,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[v0] Error fetching event by domain:", error)
     const errorMessage = error instanceof Error ? error.message : String(error)
-    
-    // Check if it's a rate limit error
-    if (errorMessage.includes("Too Many Requests") || errorMessage.includes("429")) {
-      console.log("[v0] Rate limit hit, returning service unavailable")
-      return NextResponse.json(
-        { error: "Service temporarily unavailable due to rate limiting. Please try again in a moment." }, 
-        { status: 503 }
-      )
-    }
-    
     return NextResponse.json({ error: "Failed to fetch event", details: errorMessage }, { status: 500 })
   }
 }

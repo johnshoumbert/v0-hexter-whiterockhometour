@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: { params: { eventId: st
     }
 
     const body = await request.json()
-    const { name, address, sponsor_id, short_description, full_description, item_images, directions_url, display_order } = body
+    const { name, address, sponsor, short_description, full_description, item_images, directions_url, display_order } = body
 
     // Parse and flatten item_images
     let parsedImages = []
@@ -58,11 +58,11 @@ export async function POST(request: Request, { params }: { params: { eventId: st
 
     const result = await sql`
       INSERT INTO homes (
-        event_id, name, address, sponsor_id, short_description, 
+        event_id, name, address, sponsor, short_description, 
         full_description, item_images, directions_url, display_order
       )
       VALUES (
-        ${eventId}, ${name}, ${address || null}, ${sponsor_id || null}, 
+        ${eventId}, ${name}, ${address || null}, ${sponsor || null}, 
         ${short_description || null}, ${full_description || null}, 
         ${parsedImages}, ${directions_url || null}, ${display_order || 0}
       )

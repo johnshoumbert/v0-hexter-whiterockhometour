@@ -45,7 +45,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { name, address, sponsor_id, short_description, full_description, item_images, directions_url, display_order } = body
+    const { name, address, sponsor, short_description, full_description, item_images, directions_url, display_order } = body
 
     const updates = []
     const values: any[] = []
@@ -59,9 +59,9 @@ export async function PATCH(
       updates.push(`address = $${paramIndex++}`)
       values.push(address)
     }
-    if (sponsor_id !== undefined) {
-      updates.push(`sponsor_id = $${paramIndex++}`)
-      values.push(sponsor_id)
+    if (sponsor !== undefined) {
+      updates.push(`sponsor = $${paramIndex++}`)
+      values.push(sponsor)
     }
     if (short_description !== undefined) {
       updates.push(`short_description = $${paramIndex++}`)
