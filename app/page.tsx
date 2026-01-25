@@ -177,10 +177,10 @@ export default function HomePage() {
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-[calc(100vh-120px)] min-h-[700px]">
+      <div className="relative h-[calc(100vh-120px)] min-h-[500px] md:min-h-[700px]">
         {/* Background Image */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-contain md:bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url('${heroSettings.image}')`,
           }}
@@ -201,13 +201,13 @@ export default function HomePage() {
 
         {/* Hero Content */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-4">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-3 md:mb-4">
             {heroSettings.title}
           </h1>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6">
             {heroSettings.subtitle}
           </h2>
-          <p className="text-lg md:text-xl lg:text-2xl text-white/90 font-light italic max-w-3xl">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 font-light italic max-w-3xl">
             {heroSettings.description}
           </p>
         </div>

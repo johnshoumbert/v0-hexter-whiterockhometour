@@ -255,7 +255,7 @@ export function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-1 min-w-0 mr-2">
             {logoUrl ? (
               <div className="relative h-10 w-10 flex-shrink-0">
                 <ImageWithFallback
@@ -269,7 +269,7 @@ export function Navbar() {
             ) : (
               <div className="h-8 w-8 rounded-lg bg-primary flex-shrink-0" />
             )}
-            <span className="text-xl font-bold truncate">{eventName}</span>
+            <span className="text-base md:text-xl font-bold leading-tight line-clamp-2">{eventName}</span>
           </Link>
 
           {/* Desktop Navigation */}
