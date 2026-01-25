@@ -194,6 +194,7 @@ export function Navbar() {
       ]
     : [
         { href: "/the-homes", label: "THE HOMES" },
+        { href: "/tour-map", label: "TOUR MAP" },
         { href: "/history", label: "HISTORY" },
         { href: "/tour-details", label: "DETAILS" },
         ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORS" }] : []),
