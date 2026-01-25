@@ -275,7 +275,7 @@ export default function HomePage() {
         <div
           className="bg-cover bg-center min-h-[400px] md:min-h-full"
           style={{
-            backgroundImage: `url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-V90Rs19WJxTJlkV9IEAIbUAqM1zeKJ.png')`,
+            backgroundImage: `url('https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/Hero-Join-1234-09XWkSY7OWOxq6M1CvOJALEnVHEfcH')`,
           }}
         />
       </div>
