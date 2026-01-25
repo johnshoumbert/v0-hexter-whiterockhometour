@@ -1,7 +1,7 @@
 "use server"
 
 import { sql } from "@/lib/db"
-import { cookies } from "next/headers"
+import { getSession } from "@/lib/auth"
 
 export async function GET(request: Request, { params }: { params: Promise<{ homeId: string }> }) {
   try {
@@ -14,15 +14,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ home
       WHERE home_id = ${homeId}
     `
 
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get("user")
+    const session = await getSession()
     let hasLiked = false
 
-    if (userCookie?.value) {
-      const user = JSON.parse(userCookie.value)
+    if (session) {
       const userLike = await sql`
         SELECT * FROM home_likes
-        WHERE home_id = ${homeId} AND user_id = ${user.id}
+        WHERE home_id = ${homeId} AND user_id = ${session.id}
       `
       hasLiked = userLike.length > 0
     }
@@ -44,21 +42,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ hom
     const { homeId } = await params
     console.log("[v0] Toggling like for home:", homeId)
     
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get("user")
+    const session = await getSession()
     
-    if (!userCookie?.value) {
+    if (!session) {
       console.log("[v0] User not authenticated")
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = JSON.parse(userCookie.value)
-    console.log("[v0] User:", user.id)
+    console.log("[v0] User:", session.id, session.name)
 
     // Check if already liked
     const existing = await sql`
       SELECT * FROM home_likes
-      WHERE home_id = ${homeId} AND user_id = ${user.id}
+      WHERE home_id = ${homeId} AND user_id = ${session.id}
     `
 
     if (existing.length > 0) {
@@ -66,7 +62,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hom
       console.log("[v0] Unliking home")
       await sql`
         DELETE FROM home_likes
-        WHERE home_id = ${homeId} AND user_id = ${user.id}
+        WHERE home_id = ${homeId} AND user_id = ${session.id}
       `
       return Response.json({ liked: false })
     } else {
@@ -74,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hom
       console.log("[v0] Liking home")
       await sql`
         INSERT INTO home_likes (home_id, user_id)
-        VALUES (${homeId}, ${user.id})
+        VALUES (${homeId}, ${session.id})
       `
       return Response.json({ liked: true })
     }

@@ -1,7 +1,7 @@
 "use server"
 
 import { sql } from "@/lib/db"
-import { cookies } from "next/headers"
+import { getSession } from "@/lib/auth"
 
 export async function GET(request: Request, { params }: { params: Promise<{ homeId: string }> }) {
   try {
@@ -35,16 +35,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ hom
     const { homeId } = await params
     console.log("[v0] Adding comment to home:", homeId)
     
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get("user")
+    const session = await getSession()
     
-    if (!userCookie?.value) {
+    if (!session) {
       console.log("[v0] User not authenticated")
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = JSON.parse(userCookie.value)
-    console.log("[v0] User:", user.id)
+    console.log("[v0] User:", session.id, session.name)
     
     const body = await request.json()
     const { comment } = body
@@ -57,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hom
     console.log("[v0] Inserting comment:", comment)
     const result = await sql`
       INSERT INTO home_comments (home_id, user_id, comment)
-      VALUES (${homeId}, ${user.id}, ${comment})
+      VALUES (${homeId}, ${session.id}, ${comment})
       RETURNING *
     `
 
