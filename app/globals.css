@@ -120,4 +120,47 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Heading Styles with Lovelo Font */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Lovelo", sans-serif;
+    letter-spacing: 2px;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-size: 50px;
+    line-height: 60px;
+  }
+
+  h2 {
+    font-size: 40px;
+    line-height: 48px;
+  }
+
+  h3 {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  h4 {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  h5 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  h6 {
+    font-size: 20px;
+    line-height: 28px;
+  }
 }

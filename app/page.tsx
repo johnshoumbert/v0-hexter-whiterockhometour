@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
+import { TestimonialCarousel } from "@/components/testimonial-carousel"
+import { TicketStatusSection } from "@/components/ticket-status-section"
+import { SponsorDisplaySection } from "@/components/sponsor-display-section"
 
 export default function HomePage() {
   const { event, isLoading, isMainDomain } = useEvent()
@@ -57,20 +60,23 @@ export default function HomePage() {
     const loadSettings = async () => {
       if (!event?.id) return
       try {
-        const res = await fetch(`/api/events/${event.id}/page-settings`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.pageSettings?.home?.mainHero) {
-            setHeroSettings(data.pageSettings.home.mainHero)
-            setEditForm(data.pageSettings.home.mainHero)
+        // Use hero image from event if available, otherwise fall back to page-settings
+        if (event.hero_image_url) {
+          const updatedSettings = {
+            image: event.hero_image_url,
+            title: heroSettings.title,
+            subtitle: heroSettings.subtitle,
+            description: heroSettings.description,
           }
+          setHeroSettings(updatedSettings)
+          setEditForm(updatedSettings)
         }
       } catch (error) {
         console.error("Error loading page settings:", error)
       }
     }
     loadSettings()
-  }, [event?.id])
+  }, [event?.id, event?.hero_image_url])
 
   // Countdown to April 25-26, 2026
   useEffect(() => {
@@ -164,14 +170,14 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Countdown Banner */}
       <div className="bg-black text-white py-2 px-4 text-center text-sm tracking-wider">
         THANK YOU FOR A GREAT 17TH YEAR, DALLAS!
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-[calc(100vh-120px)] min-h-[600px]">
+      <div className="relative min-h-[600px] md:min-h-[700px] flex flex-col">
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -179,7 +185,7 @@ export default function HomePage() {
             backgroundImage: `url('${heroSettings.image}')`,
           }}
         >
-          <div className="absolute inset-0 bg-black/30" />
+          <div className="absolute inset-0 bg-black/50" />
         </div>
 
         {/* Admin Edit Button */}
@@ -194,27 +200,26 @@ export default function HomePage() {
         )}
 
         {/* Hero Content */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-4">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 py-12 pb-32 md:pb-40">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tight mb-2 md:mb-4 drop-shadow-lg">
             {heroSettings.title}
           </h1>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-6 drop-shadow-lg">
             {heroSettings.subtitle}
           </h2>
-          <p className="text-lg md:text-xl lg:text-2xl text-white/90 font-light italic max-w-3xl">
+          <p className="text-sm sm:text-base md:text-xl lg:text-2xl text-white font-light italic max-w-3xl drop-shadow-lg">
             {heroSettings.description}
           </p>
         </div>
 
         {/* Countdown Section */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm py-8">
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm py-6 md:py-8 z-10">
           <div className="container mx-auto px-4">
             <h3 className="text-xl md:text-2xl font-bold text-center mb-6 tracking-wide">
               COUNTDOWN TO THE 2026 WRHT
             </h3>
             <div className="flex justify-center items-center gap-4 md:gap-8 flex-wrap">
               {[
-                { value: countdown.years, label: "Years" },
                 { value: countdown.months, label: "Months" },
                 { value: countdown.days, label: "Days" },
                 { value: countdown.hours, label: "Hrs" },
@@ -238,49 +243,15 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Ticket Status Section */}
+      <TicketStatusSection />
+
       {/* Testimonials Section */}
       <div className="container mx-auto px-4 py-16">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-wide">
           WHAT PEOPLE ARE SAYING ABOUT THE WRHT
         </h2>
-        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {[
-            {
-              quote:
-                "There are many great home tours in the North Texas area, but we value our collaborations with the White Rock Home Tour especially. Curated by a passionate group of volunteers on behalf of a worthy cause, the tour spotlights the residential architecture of one of Dallas' most interesting neighborhoods.",
-              author: "GREG BROWN",
-              title: "Dallas Center for Architecture",
-            },
-            {
-              quote:
-                "I am always excited to see what will be on the tour each year, it is always an excellent opportunity for increasing awareness and appreciation for our local residential architecture and design culture, specifically modern homes.",
-              author: "CLIFF WELCH, AIA",
-              title: "Welch Architecture",
-            },
-            {
-              quote:
-                "As a longtime resident of the White Rock Lake area, I can't think of a more vibrant community to live and work. Since living in the neighborhood, we haven't missed a single year of the White Rock Home Tour.",
-              author: "JENNIFER RILEY RICE, REALTOR",
-              title: "Heather Guild Group @ Compass",
-            },
-            {
-              quote:
-                "I was the Chair for the 2013 White Rock Home Tour while my daughter attended Hexter. It was a true highlight of being at Hexter and watching the talented planning team come together and have a lot of fun pulling off a very successful home tour that year.",
-              author: "DENNIS COLEMAN, REALTOR",
-              title: "Ebby Halliday",
-            },
-          ].map((testimonial, index) => (
-            <Card key={index} className="border-2 border-gray-900">
-              <CardContent className="p-6">
-                <blockquote className="text-gray-700 mb-4 italic leading-relaxed">
-                  "{testimonial.quote}"
-                </blockquote>
-                <div className="font-bold text-sm text-gray-900">{testimonial.author}</div>
-                <div className="text-sm text-gray-600">{testimonial.title}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {event?.id && <TestimonialCarousel eventId={event.id} autoAdvanceInterval={5 * 60 * 1000} />}
       </div>
 
       {/* Please Join Us Section */}
@@ -311,85 +282,13 @@ export default function HomePage() {
         <div
           className="bg-cover bg-center min-h-[400px] md:min-h-full"
           style={{
-            backgroundImage: `url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-V90Rs19WJxTJlkV9IEAIbUAqM1zeKJ.png')`,
+            backgroundImage: `url('https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/Hero-Join-1234-09XWkSY7OWOxq6M1CvOJALEnVHEfcH')`,
           }}
         />
       </div>
 
       {/* Sponsors Section */}
-      <div className="bg-white py-16">
-        <div className="container mx-auto px-4">
-          {/* Header with decorative lines */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
-            <h2 className="text-xl md:text-2xl font-bold text-center whitespace-nowrap tracking-wide">
-              THE 17TH ANNUAL WRHT IS MADE POSSIBLE BY
-            </h2>
-            <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
-          </div>
-
-          {/* Presenting Sponsor */}
-          <div className="text-center mb-12">
-            <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">PRESENTING SPONSOR</p>
-            <div className="flex justify-center">
-              <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-nEOmELDrUNr4AbQavdwueLENQoQurl.png"
-                alt="Comerica Bank"
-                className="h-24 object-contain"
-              />
-            </div>
-          </div>
-
-          {/* Modern and Media Sponsors */}
-          <div className="grid md:grid-cols-2 gap-12 mb-12 max-w-4xl mx-auto">
-            {/* Modern Sponsor */}
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">MODERN SPONSOR</p>
-              <div className="flex flex-col items-center gap-6">
-                <img
-                  src="/placeholder.svg?height=80&width=200"
-                  alt="Modern Sponsor"
-                  className="h-20 object-contain"
-                />
-                <img
-                  src="/placeholder.svg?height=60&width=200"
-                  alt="Ed Murchison"
-                  className="h-16 object-contain"
-                />
-                <img
-                  src="/placeholder.svg?height=60&width=200"
-                  alt="Coldwell Banker Realty"
-                  className="h-16 object-contain"
-                />
-              </div>
-            </div>
-
-            {/* Media Prime Sponsor */}
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">MEDIA PRIME SPONSOR</p>
-              <div className="flex justify-center">
-                <img
-                  src="/placeholder.svg?height=80&width=250"
-                  alt="Advocate Be Local"
-                  className="h-20 object-contain"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* More Sponsors Button */}
-          <div className="text-center">
-            <Link href="/sponsor">
-              <Button
-                size="lg"
-                className="bg-black hover:bg-gray-800 text-white px-12 py-6 text-base font-bold tracking-wide"
-              >
-                MORE SPONSORS + INFO HERE
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <SponsorDisplaySection />
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

@@ -38,6 +38,24 @@ export async function POST(request: Request, { params }: { params: { eventId: st
     const body = await request.json()
     const { name, address, sponsor, short_description, full_description, item_images, directions_url, display_order } = body
 
+    // Parse and flatten item_images
+    let parsedImages = []
+    if (item_images) {
+      try {
+        let parsed = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+        
+        // Ensure it's an array and flatten any nested arrays
+        if (Array.isArray(parsed)) {
+          parsedImages = parsed
+            .flat() // Flatten one level deep
+            .filter(item => typeof item === 'string' && item.length > 0) // Keep only valid strings
+        }
+      } catch (e) {
+        console.error("[v0] Error parsing item_images:", e)
+        parsedImages = []
+      }
+    }
+
     const result = await sql`
       INSERT INTO homes (
         event_id, name, address, sponsor, short_description, 
@@ -46,7 +64,7 @@ export async function POST(request: Request, { params }: { params: { eventId: st
       VALUES (
         ${eventId}, ${name}, ${address || null}, ${sponsor || null}, 
         ${short_description || null}, ${full_description || null}, 
-        ${item_images || []}, ${directions_url || null}, ${display_order || 0}
+        ${parsedImages}, ${directions_url || null}, ${display_order || 0}
       )
       RETURNING *
     `

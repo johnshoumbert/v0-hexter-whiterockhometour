@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from "next/server"
-import { sql } from "@vercel/postgres"
 import { checkAdminAccess } from "@/lib/admin-check"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   try {
     const { eventId } = await params
 
-    const result = await sql`
-      SELECT page_settings
-      FROM events
-      WHERE id = ${eventId}
-    `
+    try {
+      const { query } = await import("@/lib/db")
+      const result = await query(
+        `SELECT page_settings FROM events WHERE id = $1`,
+        [eventId]
+      )
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+      if (result.length === 0) {
+        return NextResponse.json({ pageSettings: {} })
+      }
+
+      return NextResponse.json({ pageSettings: result[0]?.page_settings || {} })
+    } catch (dbError) {
+      console.error("[v0] Database error in page-settings GET:", dbError)
+      // Return empty settings if database is unavailable
+      return NextResponse.json({ pageSettings: {} })
     }
-
-    return NextResponse.json({ pageSettings: result.rows[0].page_settings || {} })
   } catch (error) {
     console.error("Error fetching page settings:", error)
-    return NextResponse.json({ error: "Failed to fetch page settings" }, { status: 500 })
+    return NextResponse.json({ pageSettings: {} })
   }
 }
 
@@ -35,20 +40,41 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    // Update page settings using JSONB operations
-    const result = await sql`
-      UPDATE events
-      SET page_settings = COALESCE(page_settings, '{}'::jsonb) || 
-        jsonb_build_object(${page}, COALESCE(page_settings->${page}, '{}'::jsonb) || jsonb_build_object(${section}, ${JSON.stringify(data)}::jsonb))
-      WHERE id = ${eventId}
-      RETURNING page_settings
-    `
+    try {
+      const { query } = await import("@/lib/db")
+      
+      // Get current page settings
+      const getResult = await query(
+        `SELECT page_settings FROM events WHERE id = $1`,
+        [eventId]
+      )
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+      if (getResult.length === 0) {
+        return NextResponse.json({ error: "Event not found" }, { status: 404 })
+      }
+
+      // Merge with existing settings
+      const currentSettings = getResult[0]?.page_settings || {}
+      const pageSettings = currentSettings[page] || {}
+      const updatedSettings = {
+        ...currentSettings,
+        [page]: {
+          ...pageSettings,
+          [section]: data,
+        },
+      }
+
+      // Update settings
+      await query(
+        `UPDATE events SET page_settings = $1 WHERE id = $2`,
+        [JSON.stringify(updatedSettings), eventId]
+      )
+
+      return NextResponse.json({ pageSettings: updatedSettings })
+    } catch (dbError) {
+      console.error("[v0] Database error in page-settings PUT:", dbError)
+      return NextResponse.json({ error: "Database unavailable" }, { status: 503 })
     }
-
-    return NextResponse.json({ pageSettings: result.rows[0].page_settings })
   } catch (error) {
     console.error("Error updating page settings:", error)
     return NextResponse.json({ error: "Failed to update page settings" }, { status: 500 })

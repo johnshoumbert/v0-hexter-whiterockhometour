@@ -194,6 +194,7 @@ export function Navbar() {
       ]
     : [
         { href: "/the-homes", label: "THE HOMES" },
+        { href: "/tour-map", label: "TOUR MAP" },
         { href: "/history", label: "HISTORY" },
         { href: "/tour-details", label: "DETAILS" },
         ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORS" }] : []),
@@ -229,20 +230,20 @@ export function Navbar() {
               {auctionStatus === "live" && (
                 <>
                   <Clock className="h-4 w-4" />
-                  <span className="text-balance">Auction is Live • {timeLeft}</span>
+                  <span className="text-balance">Event is Live • {timeLeft}</span>
                 </>
               )}
               {auctionStatus === "not-started" && (
                 <>
                   <Clock className="h-4 w-4" />
-                  <span className="text-balance">Auction starts in {timeLeft}</span>
+                  <span className="text-balance">Event starts in {timeLeft}</span>
                 </>
               )}
               {auctionStatus === "ended" && (
                 <>
                   <Trophy className="h-4 w-4" />
                   <Link href="/user/wins" className="hover:underline flex items-center gap-2">
-                    <span>Auction is closed</span>
+                    <span>Thank you for a great 17th year, Dallas! </span>
                     <span className="text-xs opacity-90">(See My Winnings)</span>
                   </Link>
                 </>
@@ -255,7 +256,7 @@ export function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-1 min-w-0 mr-2">
             {logoUrl ? (
               <div className="relative h-10 w-10 flex-shrink-0">
                 <ImageWithFallback
@@ -269,7 +270,7 @@ export function Navbar() {
             ) : (
               <div className="h-8 w-8 rounded-lg bg-primary flex-shrink-0" />
             )}
-            <span className="text-xl font-bold truncate">{eventName}</span>
+            <span className="text-base md:text-xl font-bold leading-tight line-clamp-2">{eventName}</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -419,7 +420,7 @@ export function Navbar() {
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                  <Link href="/admin">Manage Auction</Link>
+                                  <Link href="/admin">View Admin</Link>
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -657,13 +658,7 @@ export function Navbar() {
                               >
                                 Profile
                               </Link>
-                              <Link
-                                href="/user/wins"
-                                className="text-sm text-muted-foreground"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              >
-                                My Wins
-                              </Link>
+                            
                               <Link
                                 href="/user/purchases"
                                 className="text-sm text-muted-foreground"

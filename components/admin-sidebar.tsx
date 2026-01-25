@@ -24,6 +24,8 @@ import {
   Tag,
   TrendingUp,
   FileText,
+  Home,
+  Quote,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -45,6 +47,11 @@ const navItems = [
     title: "Items",
     href: "/admin/items",
     icon: Package,
+  },
+  {
+    title: "Homes",
+    href: "/admin/homes",
+    icon: Home,
   },
   {
     title: "Bids",
@@ -120,6 +127,11 @@ const navItems = [
     title: "Gallery",
     href: "/admin/gallery",
     icon: ImageIcon,
+  },
+  {
+    title: "Testimonials",
+    href: "/admin/testimonials",
+    icon: Quote,
   },
   {
     title: "Shop",

@@ -172,17 +172,76 @@ export default function SponsorPage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-20 px-4 bg-muted/5 dark:bg-background">
-        <div className="container mx-auto max-w-4xl text-center">
-          <Badge className="mb-4 gap-1" variant="secondary">
-            <Sparkles className="h-3 w-3" />
-            Support {event?.name}
-          </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-balance text-foreground">Become a Sponsor</h1>
-          <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
-            Thank you to our generous sponsors who make this event possible. Join us in supporting our community and
-            gain valuable exposure for your business.
-          </p>
+      <section className="relative py-16 px-4 bg-background">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center space-y-12">
+            {/* Main Heading */}
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-wide">Sponsor the WRHT!</h1>
+              <p className="text-lg md:text-xl text-muted-foreground">
+                Join the WRHT as a sponsor - many opportunities are available
+              </p>
+            </div>
+
+            {/* CTA Button */}
+            <div className="space-y-4">
+              <h2 className="text-2xl md:text-3xl font-semibold">Want to become a sponsor?</h2>
+              <Button size="lg" className="text-base px-8" asChild>
+                <a href="/contact">CONTACT US</a>
+              </Button>
+            </div>
+
+            {/* Gratitude Message */}
+            <div className="border-t border-b py-8 my-8">
+              <p className="text-lg md:text-xl italic text-muted-foreground leading-relaxed">
+                Without the generosity of our sponsors, this event would not be possible.
+                <br />
+                <strong className="font-semibold text-foreground">
+                  Communities like ours thrive because of businesses like these.
+                </strong>
+              </p>
+            </div>
+
+            {/* Current Sponsors Heading */}
+            <div>
+              <p className="text-xl md:text-2xl italic text-muted-foreground mb-2">
+                Our deepest gratitude goes to the sponsors of the
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold">{event?.name || "2025 White Rock Home Tour"}:</h2>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Current Sponsors Display */}
+      <section className="container mx-auto px-4 py-12 max-w-6xl">
+        <div className="space-y-12">
+          {sponsorLevels
+            .filter((level) => level.sponsors && level.sponsors.length > 0)
+            .map((level) => (
+              <div key={level.level} className="space-y-6">
+                <h3 className="text-xl md:text-2xl font-bold text-center uppercase tracking-wide">
+                  {level.name || level.level}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 items-center justify-items-center">
+                  {level.sponsors?.map((sponsor) => (
+                    <div key={sponsor.id} className="w-full max-w-[200px]">
+                      {sponsor.logo_url ? (
+                        <img
+                          src={sponsor.logo_url}
+                          alt={sponsor.name}
+                          className="w-full h-auto object-contain max-h-24"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-20 border rounded p-4">
+                          <span className="text-sm font-semibold text-center">{sponsor.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
         </div>
       </section>
 
