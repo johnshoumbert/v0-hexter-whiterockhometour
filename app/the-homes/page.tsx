@@ -73,10 +73,20 @@ export default function TheHomesPage() {
       const res = await fetch(`/api/events/${event?.id}/homes`)
       if (res.ok) {
         const data = await res.json()
-        setHomes(data)
+        // Parse item_images if it's a JSON string
+        const parsedHomes = data.map((home: any) => ({
+          ...home,
+          item_images: typeof home.item_images === 'string' 
+            ? JSON.parse(home.item_images || '[]')
+            : Array.isArray(home.item_images)
+            ? home.item_images
+            : []
+        }))
+        console.log('[v0] Parsed homes with images:', parsedHomes)
+        setHomes(parsedHomes)
         // Initialize image indexes
         const indexes: { [key: string]: number } = {}
-        data.forEach((home: Home) => {
+        parsedHomes.forEach((home: Home) => {
           indexes[home.id] = 0
         })
         setCurrentImageIndexes(indexes)

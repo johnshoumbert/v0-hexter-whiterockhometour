@@ -99,9 +99,18 @@ export default function AdminHomesPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setTotalCount(data.length)
-        setTotalPages(Math.ceil(data.length / pageSize))
-        setHomes(data)
+        // Parse item_images if it's a JSON string
+        const parsedHomes = data.map((home: any) => ({
+          ...home,
+          item_images: typeof home.item_images === 'string' 
+            ? JSON.parse(home.item_images || '[]')
+            : Array.isArray(home.item_images)
+            ? home.item_images
+            : []
+        }))
+        setTotalCount(parsedHomes.length)
+        setTotalPages(Math.ceil(parsedHomes.length / pageSize))
+        setHomes(parsedHomes)
       } else {
         toast({
           title: "Error",
