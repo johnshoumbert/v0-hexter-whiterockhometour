@@ -195,15 +195,15 @@ export function Navbar() {
     : [
         { href: "/the-homes", label: "THE HOMES" },
         { href: "/history", label: "HISTORY" },
-        { href: "/tour-details", label: "TOUR DETAILS" },
-        ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORSHIPS" }] : []),
+        { href: "/tour-details", label: "DETAILS" },
+        ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORS" }] : []),
         { href: "/contact", label: "CONTACT US" },
         ...(enableAuction ? [{ href: "/auctions", label: "AUCTION" }] : []),
         ...(enableShop ? [{ href: "/shop", label: "SHOP" }] : []),
         ...(enableVoting ? [{ href: "/voting", label: "VOTING" }] : []),
         ...(enableDonation ? [{ href: "/donate", label: "DONATE" }] : []),
         ...(enableGallery ? [{ href: "/gallery", label: "GALLERY" }] : []),
-        ...(enableRegistration ? [{ href: "/tickets", label: "GET YOUR TICKETS NOW" }] : []),
+        ...(enableRegistration ? [{ href: "/tickets", label: "TICKETS" }] : []),
       ]
 
   const logoUrl = event?.logo_image_url
