@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { TestimonialCarousel } from "@/components/testimonial-carousel"
+import { TicketStatusSection } from "@/components/ticket-status-section"
 
 export default function HomePage() {
   const { event, isLoading, isMainDomain } = useEvent()
@@ -240,6 +241,9 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Ticket Status Section */}
+      <TicketStatusSection />
 
       {/* Testimonials Section */}
       <div className="container mx-auto px-4 py-16">
