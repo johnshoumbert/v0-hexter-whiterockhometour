@@ -420,7 +420,7 @@ export function Navbar() {
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                  <Link href="/admin">Manage Auction</Link>
+                                  <Link href="/admin">View Admin</Link>
                                 </DropdownMenuItem>
                               </>
                             )}
