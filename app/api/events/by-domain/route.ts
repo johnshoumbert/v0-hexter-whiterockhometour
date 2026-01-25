@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       domain === "" ||
       domain === "localhost" ||
       domain === "127.0.0.1" ||
-      domain.includes("vusercontent.net")
+      (domain.includes("vusercontent.net") && !domain.includes("vercel.app"))
 
     if (isLocalhost) {
       console.log("[v0] Local/dev/empty domain detected - returning localhost event")
@@ -173,11 +173,127 @@ export async function GET(request: NextRequest) {
     }
 
     const isVusercontentPreview = host.includes(".vusercontent.net")
+    const isVercelApp = host.includes(".vercel.app")
 
     // If it's a preview domain, try to use the domain query param if available
-    if (isVusercontentPreview && searchParams.get("domain")) {
+    if ((isVusercontentPreview || isVercelApp) && searchParams.get("domain")) {
       domain = searchParams.get("domain") || domain
       console.log("[v0] Preview domain detected, using query param domain:", domain)
+    }
+    
+    // For Vercel app domains without a domain param, try to find the most recent event
+    if (isVercelApp && !searchParams.get("domain")) {
+      console.log("[v0] Vercel app domain detected without domain param, finding most recent event")
+      const recentEventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+        [],
+      )
+      
+      if (recentEventResult.length > 0) {
+        const eventData = recentEventResult[0]
+        console.log("[v0] Most recent event found:", eventData.event_name, "id:", eventData.id)
+
+        // Fetch theme
+        let themeData = null
+        try {
+          const themeResult = await safeQuery(
+            async () =>
+              sql`
+            SELECT primary_color, secondary_color, logo_url
+            FROM themes
+            WHERE event_id = ${eventData.id}
+            LIMIT 1
+          `,
+            [],
+          )
+          if (themeResult.length > 0) {
+            themeData = themeResult[0]
+          }
+        } catch (error) {
+          console.log("[v0] Theme lookup failed")
+        }
+
+        // Fetch tickets
+        let ticketsData = []
+        try {
+          const ticketsResult = await safeQuery(
+            async () =>
+              sql`
+            SELECT id, name, description, price, quantity_available, quantity_sold, is_active
+            FROM event_tickets
+            WHERE event_id = ${eventData.id}
+            ORDER BY price ASC
+          `,
+            [],
+          )
+
+          const now = new Date()
+          ticketsData = await Promise.all(
+            ticketsResult.map(async (ticket: any) => {
+              try {
+                const tiers = await safeQuery(
+                  async () =>
+                    sql`
+                    SELECT id, tier_name, price, start_date, end_date, display_order
+                    FROM pricing_tiers
+                    WHERE ticket_id = ${ticket.id}
+                    ORDER BY display_order ASC, start_date ASC NULLS LAST
+                  `,
+                  [],
+                )
+
+                const tiersWithStatus = tiers.map((tier: any) => {
+                  const startDate = tier.start_date ? new Date(tier.start_date) : null
+                  const endDate = tier.end_date ? new Date(tier.end_date) : null
+                  const isAfterStart = !startDate || now >= startDate
+                  const isBeforeEnd = !endDate || now <= endDate
+                  const isActive = isAfterStart && isBeforeEnd
+
+                  return {
+                    id: tier.id,
+                    name: tier.tier_name,
+                    price: tier.price,
+                    startDate: tier.start_date,
+                    endDate: tier.end_date,
+                    displayOrder: tier.display_order,
+                    isActive,
+                  }
+                })
+
+                return {
+                  ...ticket,
+                  pricingTiers: tiersWithStatus,
+                }
+              } catch (error) {
+                return ticket
+              }
+            }),
+          )
+        } catch (error) {
+          console.log("[v0] Tickets lookup failed")
+        }
+
+        const event = {
+          ...eventData,
+          theme: themeData
+            ? {
+                primary_color: themeData.primary_color,
+                secondary_color: themeData.secondary_color,
+                logo_url: themeData.logo_url,
+              }
+            : null,
+          tickets: ticketsData,
+        }
+
+        console.log("[v0] Returning most recent event:", event.event_name)
+        return NextResponse.json({ event })
+      }
     }
 
     let eventResult = []
