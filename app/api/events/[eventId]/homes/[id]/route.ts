@@ -32,7 +32,18 @@ export async function PUT(
       display_order 
     } = body
 
-    console.log("[v0] Updating home with images:", item_images)
+    // Parse item_images if it's a JSON string, otherwise use as-is
+    let parsedImages = null
+    if (item_images) {
+      try {
+        parsedImages = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+      } catch (e) {
+        console.error("[v0] Error parsing item_images:", e)
+        parsedImages = []
+      }
+    }
+
+    console.log("[v0] Updating home with parsed images:", parsedImages)
 
     const result = await sql`
       UPDATE homes
@@ -42,7 +53,7 @@ export async function PUT(
         sponsor = ${sponsor || null},
         short_description = ${short_description || null},
         full_description = ${full_description || null},
-        item_images = ${item_images || null},
+        item_images = ${parsedImages ? JSON.stringify(parsedImages) : null},
         directions_url = ${directions_url || null},
         display_order = ${display_order || 0},
         updated_at = NOW()
