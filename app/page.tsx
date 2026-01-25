@@ -180,12 +180,12 @@ export default function HomePage() {
       <div className="relative h-[calc(100vh-120px)] min-h-[500px] md:min-h-[700px]">
         {/* Background Image */}
         <div
-          className="absolute inset-0 bg-contain md:bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: `url('${heroSettings.image}')`,
           }}
         >
-          <div className="absolute inset-0 bg-black/30" />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
 
         {/* Admin Edit Button */}
