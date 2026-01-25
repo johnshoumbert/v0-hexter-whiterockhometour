@@ -172,7 +172,7 @@ export default function HomePage() {
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-[calc(100vh-120px)] min-h-[600px]">
+      <div className="relative h-[calc(100vh-120px)] min-h-[700px]">
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -215,7 +215,6 @@ export default function HomePage() {
             </h3>
             <div className="flex justify-center items-center gap-4 md:gap-8 flex-wrap">
               {[
-                { value: countdown.years, label: "Years" },
                 { value: countdown.months, label: "Months" },
                 { value: countdown.days, label: "Days" },
                 { value: countdown.hours, label: "Hrs" },
