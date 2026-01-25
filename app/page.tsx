@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { TestimonialCarousel } from "@/components/testimonial-carousel"
 import { TicketStatusSection } from "@/components/ticket-status-section"
+import { SponsorDisplaySection } from "@/components/sponsor-display-section"
 
 export default function HomePage() {
   const { event, isLoading, isMainDomain } = useEvent()
@@ -287,79 +288,7 @@ export default function HomePage() {
       </div>
 
       {/* Sponsors Section */}
-      <div className="bg-white py-16">
-        <div className="container mx-auto px-4">
-          {/* Header with decorative lines */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
-            <h2 className="text-xl md:text-2xl font-bold text-center whitespace-nowrap tracking-wide">
-              THE 17TH ANNUAL WRHT IS MADE POSSIBLE BY
-            </h2>
-            <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
-          </div>
-
-          {/* Presenting Sponsor */}
-          <div className="text-center mb-12">
-            <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">PRESENTING SPONSOR</p>
-            <div className="flex justify-center">
-              <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-nEOmELDrUNr4AbQavdwueLENQoQurl.png"
-                alt="Comerica Bank"
-                className="h-24 object-contain"
-              />
-            </div>
-          </div>
-
-          {/* Modern and Media Sponsors */}
-          <div className="grid md:grid-cols-2 gap-12 mb-12 max-w-4xl mx-auto">
-            {/* Modern Sponsor */}
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">MODERN SPONSOR</p>
-              <div className="flex flex-col items-center gap-6">
-                <img
-                  src="/placeholder.svg?height=80&width=200"
-                  alt="Modern Sponsor"
-                  className="h-20 object-contain"
-                />
-                <img
-                  src="/placeholder.svg?height=60&width=200"
-                  alt="Ed Murchison"
-                  className="h-16 object-contain"
-                />
-                <img
-                  src="/placeholder.svg?height=60&width=200"
-                  alt="Coldwell Banker Realty"
-                  className="h-16 object-contain"
-                />
-              </div>
-            </div>
-
-            {/* Media Prime Sponsor */}
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-700 mb-6 tracking-wider">MEDIA PRIME SPONSOR</p>
-              <div className="flex justify-center">
-                <img
-                  src="/placeholder.svg?height=80&width=250"
-                  alt="Advocate Be Local"
-                  className="h-20 object-contain"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* More Sponsors Button */}
-          <div className="text-center">
-            <Link href="/sponsor">
-              <Button
-                size="lg"
-                className="bg-black hover:bg-gray-800 text-white px-12 py-6 text-base font-bold tracking-wide"
-              >
-                MORE SPONSORS + INFO HERE
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <SponsorDisplaySection />
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
