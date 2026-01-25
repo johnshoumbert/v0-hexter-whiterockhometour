@@ -242,7 +242,7 @@ export function Navbar() {
                 <>
                   <Trophy className="h-4 w-4" />
                   <Link href="/user/wins" className="hover:underline flex items-center gap-2">
-                    <span>Auction is closed</span>
+                    <span>Thank you for a great 17th year, Dallas! </span>
                     <span className="text-xs opacity-90">(See My Winnings)</span>
                   </Link>
                 </>
