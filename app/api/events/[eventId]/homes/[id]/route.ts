@@ -32,11 +32,20 @@ export async function PUT(
       display_order 
     } = body
 
-    // Parse item_images if it's a JSON string, otherwise use as-is
+    // Parse and flatten item_images
     let parsedImages = null
     if (item_images) {
       try {
-        parsedImages = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+        let parsed = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+        
+        // Ensure it's an array and flatten any nested arrays
+        if (Array.isArray(parsed)) {
+          parsedImages = parsed
+            .flat() // Flatten one level deep
+            .filter(item => typeof item === 'string' && item.length > 0) // Keep only valid strings
+        } else {
+          parsedImages = []
+        }
       } catch (e) {
         console.error("[v0] Error parsing item_images:", e)
         parsedImages = []

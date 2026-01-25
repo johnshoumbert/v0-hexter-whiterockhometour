@@ -36,14 +36,28 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [imageError, setImageError] = useState<{ [key: number]: boolean }>({})
 
-  const parseImageUrls = (imageUrl: string | null) => {
-    if (!imageUrl) return []
-    try {
-      const parsed = JSON.parse(imageUrl)
-      return Array.isArray(parsed) ? parsed : [imageUrl]
-    } catch {
-      return [imageUrl]
+  const parseImageUrls = (imageData: any): string[] => {
+    if (!imageData) return []
+    
+    // If already an array, return it (filtering out empty arrays and invalid values)
+    if (Array.isArray(imageData)) {
+      return imageData.filter(item => typeof item === 'string' && item.length > 0)
     }
+    
+    // If it's a string, try to parse it
+    if (typeof imageData === 'string') {
+      try {
+        const parsed = JSON.parse(imageData)
+        if (Array.isArray(parsed)) {
+          return parsed.filter(item => typeof item === 'string' && item.length > 0)
+        }
+        return [imageData]
+      } catch {
+        return [imageData]
+      }
+    }
+    
+    return []
   }
 
   const [formData, setFormData] = useState({

@@ -38,11 +38,18 @@ export async function POST(request: Request, { params }: { params: { eventId: st
     const body = await request.json()
     const { name, address, sponsor, short_description, full_description, item_images, directions_url, display_order } = body
 
-    // Parse item_images if it's a JSON string, otherwise use as-is
+    // Parse and flatten item_images
     let parsedImages = []
     if (item_images) {
       try {
-        parsedImages = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+        let parsed = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+        
+        // Ensure it's an array and flatten any nested arrays
+        if (Array.isArray(parsed)) {
+          parsedImages = parsed
+            .flat() // Flatten one level deep
+            .filter(item => typeof item === 'string' && item.length > 0) // Keep only valid strings
+        }
       } catch (e) {
         console.error("[v0] Error parsing item_images:", e)
         parsedImages = []
