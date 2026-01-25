@@ -658,13 +658,7 @@ export function Navbar() {
                               >
                                 Profile
                               </Link>
-                              <Link
-                                href="/user/wins"
-                                className="text-sm text-muted-foreground"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              >
-                                My Wins
-                              </Link>
+                            
                               <Link
                                 href="/user/purchases"
                                 className="text-sm text-muted-foreground"
