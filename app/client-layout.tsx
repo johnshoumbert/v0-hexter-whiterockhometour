@@ -7,6 +7,7 @@ import { EventProvider } from "@/contexts/event-context"
 import { EventThemeProvider } from "@/components/event-theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { CartPanel } from "@/components/cart-panel"
 import { usePathname, useRouter } from "next/navigation"
@@ -62,8 +63,14 @@ function ComingSoonCheck({ children }: { children: React.ReactNode }) {
 function KioskAwareContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isKioskMode = pathname?.startsWith("/kiosk")
+  const showFooter = !pathname?.startsWith("/user") && !pathname?.startsWith("/admin") && !pathname?.startsWith("/administration") && !isKioskMode
 
-  return <div className={isKioskMode ? "" : "pt-16"}>{children}</div>
+  return (
+    <>
+      <div className={isKioskMode ? "" : "pt-16"}>{children}</div>
+      {showFooter && <Footer />}
+    </>
+  )
 }
 
 export default function ClientLayout({
