@@ -197,7 +197,6 @@ export function Navbar() {
         { href: "/history", label: "HISTORY" },
         { href: "/tour-details", label: "DETAILS" },
         ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORS" }] : []),
-        { href: "/contact", label: "CONTACT US" },
         ...(enableAuction ? [{ href: "/auctions", label: "AUCTION" }] : []),
         ...(enableShop ? [{ href: "/shop", label: "SHOP" }] : []),
         ...(enableVoting ? [{ href: "/voting", label: "VOTING" }] : []),
