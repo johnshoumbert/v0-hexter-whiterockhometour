@@ -58,20 +58,23 @@ export default function HomePage() {
     const loadSettings = async () => {
       if (!event?.id) return
       try {
-        const res = await fetch(`/api/events/${event.id}/page-settings`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.pageSettings?.home?.mainHero) {
-            setHeroSettings(data.pageSettings.home.mainHero)
-            setEditForm(data.pageSettings.home.mainHero)
+        // Use hero image from event if available, otherwise fall back to page-settings
+        if (event.hero_image_url) {
+          const updatedSettings = {
+            image: event.hero_image_url,
+            title: heroSettings.title,
+            subtitle: heroSettings.subtitle,
+            description: heroSettings.description,
           }
+          setHeroSettings(updatedSettings)
+          setEditForm(updatedSettings)
         }
       } catch (error) {
         console.error("Error loading page settings:", error)
       }
     }
     loadSettings()
-  }, [event?.id])
+  }, [event?.id, event?.hero_image_url])
 
   // Countdown to April 25-26, 2026
   useEffect(() => {
