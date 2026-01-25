@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Facebook, Instagram, Mail } from "lucide-react"
+import { Facebook, Instagram, ChevronUp } from "lucide-react"
 import { useEvent } from "@/contexts/event-context"
 import Image from "next/image"
 
@@ -9,131 +9,108 @@ export function Footer() {
   const currentYear = new Date().getFullYear()
   const { event } = useEvent()
 
-  const logoUrl = event?.logo_image_url
-  const eventName = event?.event_name || "Auction"
-
-  const enableAuction = event?.enable_auction !== false
-  const enableVoting = event?.enable_voting || false
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
-    <footer className="border-t bg-muted/50">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 grid-cols-2 md:grid-cols-4">
-          {/* Brand */}
-          <div className="space-y-4 col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2">
-              {logoUrl ? (
-                <div className="relative h-10 w-10 flex-shrink-0">
-                  <Image
-                    src="/images/design-mode/myschoolauction.png"
-                    alt={`${eventName} logo`}
-                    fill
-                    className="object-contain"
-                    sizes="40px"
-                  />
-                </div>
-              ) : (
-                <div className="h-8 w-8 rounded-lg bg-primary" />
-              )}
-              <span className="text-lg font-bold">{eventName}</span>
+    <footer className="bg-[#2a2a2a] text-white">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid gap-12 md:grid-cols-3 items-start">
+          {/* About Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold tracking-wider uppercase mb-6">About The WRHT</h3>
+            <p className="text-sm leading-relaxed text-gray-300">
+              The White Rock Home Tour was founded in 2006 as a fundraiser for Hexter Elementary (a public school in Dallas ISD) near White Rock Lake. Each year the tour showcases magnificent mid-century and new modern homes.
+            </p>
+          </div>
+
+          {/* Logo Section */}
+          <div className="flex justify-center">
+            <div className="relative w-48 h-48">
+              <Image
+                src="https://wrhometour.com/wp-content/uploads/2022/11/Hexter-Logo-Color.png"
+                alt="Hexter Elementary Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            <p className="text-sm text-muted-foreground">Supporting our School through charitable auctions</p>
           </div>
 
-          {/* Quick Links */}
+          {/* Links Section */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/" className="text-muted-foreground hover:text-foreground">
-                  Home
-                </Link>
-              </li>
-              {enableAuction && (
-                <li>
-                  <Link href="/auctions" className="text-muted-foreground hover:text-foreground">
-                    Auctions
-                  </Link>
-                </li>
-              )}
-              <li>
-                <Link href="/events" className="text-muted-foreground hover:text-foreground">
-                  Events
-                </Link>
-              </li>
-              <li>
-                <Link href="/donate" className="text-muted-foreground hover:text-foreground">
-                  Donate
-                </Link>
-              </li>
-              <li>
-                <Link href="/create-auction" className="text-primary hover:text-primary/80 font-medium">
-                  Start an Auction
-                </Link>
-              </li>
-            </ul>
+            <nav className="flex flex-col space-y-3">
+              <Link 
+                href="/the-homes" 
+                className="text-sm font-bold tracking-wider uppercase hover:text-gray-300 transition-colors"
+              >
+                THE HOMES
+              </Link>
+              <Link 
+                href="/tickets" 
+                className="text-sm font-bold tracking-wider uppercase hover:text-gray-300 transition-colors"
+              >
+                BUY TICKETS
+              </Link>
+              <Link 
+                href="/tour-details" 
+                className="text-sm font-bold tracking-wider uppercase hover:text-gray-300 transition-colors"
+              >
+                TOUR DETAILS
+              </Link>
+              <Link 
+                href="/contact" 
+                className="text-sm font-bold tracking-wider uppercase hover:text-gray-300 transition-colors"
+              >
+                CONTACT US
+              </Link>
+            </nav>
           </div>
+        </div>
+      </div>
 
-          {/* Legal */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Legal</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/privacy" className="text-muted-foreground hover:text-foreground">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-muted-foreground hover:text-foreground">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-muted-foreground hover:text-foreground">
-                  Contact Us
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Social */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Connect</h3>
-            <div className="flex gap-4">
+      {/* Bottom Bar */}
+      <div className="border-t border-gray-700">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <Link 
+              href="https://shoumbert.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+            >
+              © 2026 Shoumbert Labs. All rights reserved.
+            </Link>
+            
+            <div className="flex items-center gap-6">
               <Link
-                href="https://www.facebook.com/profile.php?viewas=100000686899395&id=61583487040467"
-                className="text-muted-foreground hover:text-foreground"
+                href="https://www.facebook.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-gray-300 transition-colors"
                 aria-label="Facebook"
               >
                 <Facebook className="h-5 w-5" />
               </Link>
-
               <Link
-                href="https://www.instagram.com/myschoolauction/"
-                className="text-muted-foreground hover:text-foreground"
+                href="https://www.instagram.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-gray-300 transition-colors"
                 aria-label="Instagram"
               >
                 <Instagram className="h-5 w-5" />
               </Link>
-              <Link href="/support" className="text-muted-foreground hover:text-foreground" aria-label="Support">
-                <Mail className="h-5 w-5" />
-              </Link>
+              <button
+                onClick={scrollToTop}
+                className="text-white hover:text-gray-300 transition-colors"
+                aria-label="Scroll to top"
+              >
+                <ChevronUp className="h-5 w-5" />
+              </button>
             </div>
           </div>
-        </div>
-
-        <div className="mt-8 border-t pt-8 text-center">
-          <p className="text-sm text-muted-foreground mb-2">
-            Powered by{" "}
-            <Link href="https://www.myschoolauction.com" className="text-primary hover:text-primary/80 font-medium">
-              MySchoolAuction.com
-            </Link>
-          </p>
-          <p className="text-xs text-muted-foreground">The premier platform for school fundraising auctions</p>
-        </div>
-
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {currentYear} Shoumbert Labs. All rights reserved.</p>
         </div>
       </div>
     </footer>

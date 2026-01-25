@@ -193,14 +193,16 @@ export function Navbar() {
         { href: "/demo-auction", label: "Demo Auction" },
       ]
     : [
-        { href: "/", label: "Home" },
-        ...(enableAuction ? [{ href: "/auctions", label: "Auction" }] : []), // Only show auction link if enableAuction is true
-        ...(enableShop ? [{ href: "/shop", label: "Shop" }] : []), // Added shop navigation link conditionally
-        ...(enableSponsors ? [{ href: "/sponsor", label: "Sponsor" }] : []), // Added sponsor navigation link conditionally
-        ...(enableRegistration ? [{ href: "/tickets", label: "Tickets" }] : []),
-        ...(enableVoting ? [{ href: "/voting", label: "Voting" }] : []),
-        ...(enableDonation ? [{ href: "/donate", label: "Donate" }] : []),
-        ...(enableGallery ? [{ href: "/gallery", label: "Gallery" }] : []),
+        { href: "/the-homes", label: "THE HOMES" },
+        { href: "/history", label: "HISTORY" },
+        { href: "/tour-details", label: "DETAILS" },
+        ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORS" }] : []),
+        ...(enableAuction ? [{ href: "/auctions", label: "AUCTION" }] : []),
+        ...(enableShop ? [{ href: "/shop", label: "SHOP" }] : []),
+        ...(enableVoting ? [{ href: "/voting", label: "VOTING" }] : []),
+        ...(enableDonation ? [{ href: "/donate", label: "DONATE" }] : []),
+        ...(enableGallery ? [{ href: "/gallery", label: "GALLERY" }] : []),
+        ...(enableRegistration ? [{ href: "/tickets", label: "TICKETS" }] : []),
       ]
 
   const logoUrl = event?.logo_image_url

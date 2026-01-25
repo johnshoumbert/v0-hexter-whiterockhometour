@@ -34,18 +34,14 @@ export async function GET(request: NextRequest) {
 
     if (isLocalhost) {
       console.log("[v0] Local/dev/empty domain detected - returning localhost event")
+      // Use specific event ID for localhost
+      const localhostEventId = 'd42fcc36-3f53-4a65-982c-373776747c44'
       const eventResult = await safeQuery(
         async () =>
           sql`
         SELECT *
         FROM events
-        WHERE LOWER(
-          REGEXP_REPLACE(
-            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-            '^www\\.',
-            ''
-          )
-        ) = 'localhost'
+        WHERE id = ${localhostEventId}
         LIMIT 1
       `,
         [],
