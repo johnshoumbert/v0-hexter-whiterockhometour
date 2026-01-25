@@ -170,14 +170,14 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Countdown Banner */}
       <div className="bg-black text-white py-2 px-4 text-center text-sm tracking-wider">
         THANK YOU FOR A GREAT 17TH YEAR, DALLAS!
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-[calc(100vh-120px)] min-h-[500px] md:min-h-[700px]">
+      <div className="relative min-h-[600px] md:min-h-[700px] flex flex-col">
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -185,7 +185,7 @@ export default function HomePage() {
             backgroundImage: `url('${heroSettings.image}')`,
           }}
         >
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-black/50" />
         </div>
 
         {/* Admin Edit Button */}
@@ -200,20 +200,20 @@ export default function HomePage() {
         )}
 
         {/* Hero Content */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-3 md:mb-4">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 py-12 pb-32 md:pb-40">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tight mb-2 md:mb-4 drop-shadow-lg">
             {heroSettings.title}
           </h1>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-6 drop-shadow-lg">
             {heroSettings.subtitle}
           </h2>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 font-light italic max-w-3xl">
+          <p className="text-sm sm:text-base md:text-xl lg:text-2xl text-white font-light italic max-w-3xl drop-shadow-lg">
             {heroSettings.description}
           </p>
         </div>
 
         {/* Countdown Section */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm py-8">
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm py-6 md:py-8 z-10">
           <div className="container mx-auto px-4">
             <h3 className="text-xl md:text-2xl font-bold text-center mb-6 tracking-wide">
               COUNTDOWN TO THE 2026 WRHT
