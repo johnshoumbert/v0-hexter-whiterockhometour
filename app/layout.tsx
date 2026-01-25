@@ -1,12 +1,10 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono, Nunito } from "next/font/google"
+import { Lato } from "next/font/google"
 import ClientLayout from "./client-layout"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
-const nunito = Nunito({ subsets: ["latin"], weight: ["300", "400", "600", "700", "800"] })
+const lato = Lato({ subsets: ["latin"], weight: ["300", "400", "700", "900"] })
 
 export const metadata: Metadata = {
   title: "MySchoolAuction",
@@ -32,7 +30,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`font-sans antialiased ${nunito.className}`}>
+      <body className={`antialiased ${lato.className}`}>
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
