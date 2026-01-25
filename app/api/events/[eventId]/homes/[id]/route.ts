@@ -53,8 +53,6 @@ export async function PUT(
     }
 
     console.log("[v0] Updating home with parsed images:", parsedImages)
-
-    const imagesJson = JSON.stringify(parsedImages || [])
     
     const result = await sql`
       UPDATE homes
@@ -64,7 +62,7 @@ export async function PUT(
         sponsor = ${sponsor || null},
         short_description = ${short_description || null},
         full_description = ${full_description || null},
-        item_images = ${imagesJson}::jsonb,
+        item_images = ${parsedImages || []},
         directions_url = ${directions_url || null},
         display_order = ${display_order || 0},
         updated_at = NOW()

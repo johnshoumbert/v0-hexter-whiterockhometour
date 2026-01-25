@@ -56,8 +56,6 @@ export async function POST(request: Request, { params }: { params: { eventId: st
       }
     }
 
-    const imagesJson = JSON.stringify(parsedImages)
-
     const result = await sql`
       INSERT INTO homes (
         event_id, name, address, sponsor, short_description, 
@@ -66,7 +64,7 @@ export async function POST(request: Request, { params }: { params: { eventId: st
       VALUES (
         ${eventId}, ${name}, ${address || null}, ${sponsor || null}, 
         ${short_description || null}, ${full_description || null}, 
-        ${imagesJson}::jsonb, ${directions_url || null}, ${display_order || 0}
+        ${parsedImages}, ${directions_url || null}, ${display_order || 0}
       )
       RETURNING *
     `
