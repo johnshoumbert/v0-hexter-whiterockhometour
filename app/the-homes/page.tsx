@@ -290,17 +290,29 @@ export default function TheHomesPage() {
                     )}
                   </div>
 
-                  {home.directions_url && (
+                  <div className="flex gap-3 flex-wrap">
                     <Button
                       asChild
-                      className="bg-foreground text-background hover:bg-foreground/90 uppercase tracking-wider w-full md:w-auto"
+                      variant="default"
+                      className="uppercase tracking-wider"
                     >
-                      <a href={home.directions_url} target="_blank" rel="noopener noreferrer">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        GET DRIVING DIRECTIONS
-                      </a>
+                      <Link href={`/homes/${home.id}`}>
+                        View Home Details
+                      </Link>
                     </Button>
-                  )}
+                    {home.directions_url && (
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="uppercase tracking-wider"
+                      >
+                        <a href={home.directions_url} target="_blank" rel="noopener noreferrer">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          GET DIRECTIONS
+                        </a>
+                      </Button>
+                    )}
+                  </div>
 
                   <div>
                     <button
