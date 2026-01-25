@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Loader2, Upload, X, Home, Info, Settings, ImageIcon, Trash2 } from "lucide-react"
+import { Loader2, Upload, X, Home, Info, Settings, ImageIcon, Trash2, Check, ChevronsUpDown } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { useEvent } from "@/contexts/event-context"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,12 +23,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { cn } from "@/lib/utils"
 
 interface HomeFormProps {
   initialData?: any
   onSuccess?: () => void
   onDelete?: () => void
+}
+
+interface Sponsor {
+  id: string
+  name: string
+  logo_url?: string
+  website_url?: string
 }
 
 export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps) {
@@ -35,6 +44,10 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
   const [isUploading, setIsUploading] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [imageError, setImageError] = useState<{ [key: number]: boolean }>({})
+  const [sponsors, setSponsors] = useState<Sponsor[]>([])
+  const [sponsorComboOpen, setSponsorComboOpen] = useState(false)
+  const [sponsorSearch, setSponsorSearch] = useState("")
+  const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
 
   const parseImageUrls = (imageData: any): string[] => {
     if (!imageData) return []
@@ -64,6 +77,7 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
     name: initialData?.name || "",
     address: initialData?.address || "",
     sponsor: initialData?.sponsor || "",
+    sponsor_id: initialData?.sponsor_id || "",
     short_description: initialData?.short_description || "",
     full_description: initialData?.full_description || "",
     directions_url: initialData?.directions_url || "",
@@ -72,6 +86,72 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
   })
 
   const [images, setImages] = useState<string[]>(parseImageUrls(initialData?.item_images))
+
+  useEffect(() => {
+    fetchSponsors()
+  }, [])
+
+  const fetchSponsors = async () => {
+    setIsLoadingSponsors(true)
+    try {
+      const res = await fetch("/api/sponsors")
+      if (res.ok) {
+        const data = await res.json()
+        setSponsors(data.sponsors || [])
+      }
+    } catch (error) {
+      console.error("[v0] Error fetching sponsors:", error)
+    } finally {
+      setIsLoadingSponsors(false)
+    }
+  }
+
+  const handleCreateSponsor = async (sponsorName: string) => {
+    if (!sponsorName.trim()) return
+
+    try {
+      const res = await fetch("/api/sponsors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: sponsorName,
+          logo_url: null,
+          website_url: null,
+          display_order: 0,
+        }),
+        credentials: "include",
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const newSponsor = data.sponsor
+        setSponsors([...sponsors, newSponsor])
+        setFormData({ 
+          ...formData, 
+          sponsor: newSponsor.name,
+          sponsor_id: newSponsor.id
+        })
+        setSponsorSearch("")
+        toast.success("Sponsor created successfully")
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to create sponsor")
+      }
+    } catch (error) {
+      console.error("[v0] Error creating sponsor:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to create sponsor")
+    }
+  }
+
+  const handleSelectSponsor = (sponsor: Sponsor) => {
+    setFormData({
+      ...formData,
+      sponsor: sponsor.name,
+      sponsor_id: sponsor.id,
+    })
+    setSponsorComboOpen(false)
+    setSponsorSearch("")
+  }
 
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
@@ -298,13 +378,60 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
 
                   <div>
                     <Label htmlFor="sponsor">Sponsor</Label>
-                    <Input
-                      id="sponsor"
-                      value={formData.sponsor}
-                      onChange={(e) => setFormData({ ...formData, sponsor: e.target.value })}
-                      className="mt-1"
-                      placeholder="e.g., ABC Realty Group"
-                    />
+                    <Popover open={sponsorComboOpen} onOpenChange={setSponsorComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={sponsorComboOpen}
+                          className="w-full justify-between mt-1"
+                        >
+                          {formData.sponsor || "Select sponsor..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search or create sponsor..."
+                            value={sponsorSearch}
+                            onValueChange={setSponsorSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              {sponsorSearch.trim() ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCreateSponsor(sponsorSearch)}
+                                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded"
+                                >
+                                  Create "{sponsorSearch}"
+                                </button>
+                              ) : (
+                                "No sponsors found."
+                              )}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {sponsors.map((sponsor) => (
+                                <CommandItem
+                                  key={sponsor.id}
+                                  value={sponsor.name}
+                                  onSelect={() => handleSelectSponsor(sponsor)}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.sponsor_id === sponsor.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {sponsor.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div>

@@ -146,12 +146,24 @@ export function EventProvider({ children }: { children: ReactNode }) {
           if (!response.ok) {
             if (response.status === 404) {
               throw new Error("Event not found")
+            } else if (response.status === 503) {
+              throw new Error("Service temporarily unavailable. Please try again in a moment.")
             } else {
+              const errorText = await response.text()
+              console.error("[v0] Error response:", errorText)
               throw new Error("Failed to fetch event")
             }
           }
 
-          return response.json()
+          // Try to parse JSON, handle non-JSON responses
+          try {
+            return await response.json()
+          } catch (jsonError) {
+            console.error("[v0] Failed to parse JSON response:", jsonError)
+            const text = await response.text()
+            console.error("[v0] Response text:", text.substring(0, 200))
+            throw new Error("Invalid response format from server")
+          }
         },
         30000, // Cache for 30 seconds
       )
