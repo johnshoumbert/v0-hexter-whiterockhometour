@@ -74,9 +74,14 @@ export function Footer() {
       <div className="border-t border-gray-700">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-gray-400">
-              © {currentYear} 2025 17th Annual White Rock Home Tour. All content sole ownership of Hexter Elementary PTA. Site by BNM.
-            </p>
+            <Link 
+              href="https://shoumbert.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+            >
+              © 2026 Shoumbert Labs. All rights reserved.
+            </Link>
             
             <div className="flex items-center gap-6">
               <Link
