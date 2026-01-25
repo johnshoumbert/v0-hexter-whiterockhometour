@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { useEvent } from "@/contexts/event-context"
+import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, ArrowRight } from "lucide-react"
 import { PlatformLanding } from "@/components/platform-landing"
+import { Edit } from "lucide-react"
+import Image from "next/image"
 
 export default function HomePage() {
   const { event, isLoading, isMainDomain } = useEvent()
+  const { user } = useAuth()
+  const [isAdmin, setIsAdmin] = useState(false)
   const [countdown, setCountdown] = useState({
     years: 0,
     months: 0,
@@ -18,6 +22,19 @@ export default function HomePage() {
     minutes: 0,
     seconds: 0,
   })
+
+  // Check if user is admin
+  useEffect(() => {
+    if (user && event) {
+      fetch(`/api/events/${event.id}/admins`)
+        .then((res) => res.json())
+        .then((data) => {
+          const adminIds = data.admins?.map((admin: any) => admin.user_id) || []
+          setIsAdmin(adminIds.includes(user.id))
+        })
+        .catch((err) => console.error("Error checking admin status:", err))
+    }
+  }, [user, event])
 
   // Countdown to April 25-26, 2026
   useEffect(() => {
@@ -52,6 +69,12 @@ export default function HomePage() {
     return () => clearInterval(interval)
   }, [])
 
+  // Get hero settings from event
+  const heroSettings = event?.page_settings?.home?.["Main Hero"] || {}
+  const heroImage = heroSettings.backgroundImage || "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image.png-vaXEO4FNUmTmYX2mCqCr9KMzaBg5fz.jpeg"
+  const heroTitle = heroSettings.title || "THANK YOU DALLAS! SAVE THE DATE"
+  const heroSubtitle = heroSettings.subtitle || "Next year's White Rock Home Tour will be April 25 & 26, 2026"
+
   // Show main platform landing if on main domain
   if (isMainDomain) {
     return <PlatformLanding />
@@ -59,44 +82,56 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <section className="border-b border-gray-200">
-        <div className="container mx-auto px-4 py-16 md:py-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
-            Thank you Dallas! Save the date
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-700 max-w-3xl mx-auto">
-            Next year's White Rock Home Tour will be April 25 & 26, 2026
-          </p>
+      {/* Top Banner with Countdown */}
+      <div className="bg-black text-white py-2 text-center text-sm font-light tracking-wide">
+        <div className="container mx-auto px-4">
+          {countdown.days > 0 ? (
+            <span>
+              COUNTDOWN TO 2026 WRHT: {countdown.years > 0 && `${countdown.years}Y `}
+              {countdown.months > 0 && `${countdown.months}M `}
+              {countdown.days}D {countdown.hours}H {countdown.minutes}M {countdown.seconds}S
+            </span>
+          ) : (
+            <span>THANK YOU FOR A GREAT 17TH YEAR, DALLAS!</span>
+          )}
         </div>
-      </section>
+      </div>
 
-      {/* Countdown Section */}
-      <section className="border-b border-gray-200 bg-gray-50">
-        <div className="container mx-auto px-4 py-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
-            Countdown to the 2026 WRHT
-          </h2>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-4 max-w-4xl mx-auto">
-            {[
-              { label: "Years", value: countdown.years },
-              { label: "Months", value: countdown.months },
-              { label: "Days", value: countdown.days },
-              { label: "Hrs", value: countdown.hours },
-              { label: "Mins", value: countdown.minutes },
-              { label: "Secs", value: countdown.seconds },
-            ].map((item, index) => (
-              <div key={item.label} className="text-center">
-                <div className="bg-white border-2 border-gray-900 p-6 mb-2">
-                  <div className="text-4xl md:text-5xl font-bold text-gray-900">
-                    {item.value}
-                  </div>
-                </div>
-                <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                  {item.label}
-                </div>
-              </div>
-            ))}
+      {/* Hero Section with Background Image */}
+      <section className="relative h-[600px] md:h-[700px]">
+        <Image
+          src={heroImage}
+          alt="White Rock Home Tour"
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/20" />
+        
+        {/* Admin Edit Button */}
+        {isAdmin && (
+          <button
+            onClick={() => {
+              // Open edit dialog (to be implemented)
+              alert("Hero editing functionality - to be implemented with admin panel")
+            }}
+            className="absolute top-4 right-4 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all z-10"
+            title="Edit Hero Image"
+          >
+            <Edit className="w-5 h-5 text-gray-900" />
+          </button>
+        )}
+
+        {/* Hero Text */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-white px-4">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight drop-shadow-lg">
+              {heroTitle}
+            </h1>
+            <p className="text-xl md:text-2xl font-light italic max-w-3xl mx-auto drop-shadow-md">
+              {heroSubtitle}
+            </p>
           </div>
         </div>
       </section>
@@ -178,7 +213,7 @@ export default function HomePage() {
             className="bg-gray-900 hover:bg-gray-800 text-white border-2 border-gray-900 px-8 py-6 text-lg font-semibold"
             asChild
           >
-            <Link href="/tickets">Buy Your Tickets</Link>
+            <Link href="/tickets">GET YOUR TICKETS NOW</Link>
           </Button>
         </div>
       </section>
@@ -239,7 +274,7 @@ export default function HomePage() {
             className="bg-gray-900 hover:bg-gray-800 text-white border-2 border-gray-900 px-8 py-6 text-lg font-semibold"
             asChild
           >
-            <Link href="/contact">Contact Us Today</Link>
+            <Link href="/contact">CONTACT US</Link>
           </Button>
         </div>
       </section>
@@ -258,17 +293,17 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
             <Link
-              href="/history"
+              href="/the-homes"
               className="group block border-2 border-gray-900 hover:bg-gray-900 hover:text-white transition-colors p-8 text-center"
             >
               <div className="text-xl font-bold uppercase tracking-wide">THE HOMES</div>
             </Link>
 
             <Link
-              href="/tickets"
+              href="/history"
               className="group block border-2 border-gray-900 hover:bg-gray-900 hover:text-white transition-colors p-8 text-center"
             >
-              <div className="text-xl font-bold uppercase tracking-wide">BUY TICKETS</div>
+              <div className="text-xl font-bold uppercase tracking-wide">HISTORY</div>
             </Link>
 
             <Link
@@ -279,10 +314,10 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/contact"
+              href="/sponsor"
               className="group block border-2 border-gray-900 hover:bg-gray-900 hover:text-white transition-colors p-8 text-center"
             >
-              <div className="text-xl font-bold uppercase tracking-wide">CONTACT US</div>
+              <div className="text-xl font-bold uppercase tracking-wide">SPONSORSHIPS</div>
             </Link>
           </div>
         </div>
