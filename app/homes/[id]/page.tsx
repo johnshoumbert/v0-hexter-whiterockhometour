@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { Heart, MapPin, Share2, ChevronLeft, ChevronRight, Trash2, ExternalLink } from "lucide-react"
 import Link from "next/link"
+import { ShareModal } from "@/components/share-modal"
 
 interface Home {
   id: string
@@ -45,6 +46,7 @@ export default function HomeDetailPage() {
   const [likesCount, setLikesCount] = useState(0)
   const [hasLiked, setHasLiked] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
   useEffect(() => {
     fetchHomeDetails()
@@ -82,26 +84,38 @@ export default function HomeDetailPage() {
 
   const fetchComments = async () => {
     try {
+      console.log("[v0] Fetching comments for home:", params.id)
       const res = await fetch(`/api/homes/${params.id}/comments`)
+      console.log("[v0] Comments API response status:", res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] Comments data:", data)
         setComments(data.comments || [])
+      } else {
+        const errorText = await res.text()
+        console.error("[v0] Failed to fetch comments:", errorText)
       }
     } catch (error) {
-      console.error("Error fetching comments:", error)
+      console.error("[v0] Error fetching comments:", error)
     }
   }
 
   const fetchLikes = async () => {
     try {
+      console.log("[v0] Fetching likes for home:", params.id)
       const res = await fetch(`/api/homes/${params.id}/likes`)
+      console.log("[v0] Likes API response status:", res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] Likes data:", data)
         setLikesCount(data.count || 0)
         setHasLiked(data.hasLiked || false)
+      } else {
+        const errorText = await res.text()
+        console.error("[v0] Failed to fetch likes:", errorText)
       }
     } catch (error) {
-      console.error("Error fetching likes:", error)
+      console.error("[v0] Error fetching likes:", error)
     }
   }
 
@@ -126,11 +140,14 @@ export default function HomeDetailPage() {
 
     setIsSubmitting(true)
     try {
+      console.log("[v0] Posting comment to home:", params.id)
       const res = await fetch(`/api/homes/${params.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comment: newComment }),
       })
+
+      console.log("[v0] Comment post response status:", res.status)
 
       if (res.ok) {
         setNewComment("")
@@ -140,12 +157,15 @@ export default function HomeDetailPage() {
           description: "Comment added",
         })
       } else {
-        throw new Error("Failed to add comment")
+        const errorData = await res.json().catch(() => ({}))
+        console.error("[v0] Failed to add comment:", errorData)
+        throw new Error(errorData.error || "Failed to add comment")
       }
     } catch (error) {
+      console.error("[v0] Error adding comment:", error)
       toast({
         title: "Error",
-        description: "Failed to add comment",
+        description: error instanceof Error ? error.message : "Failed to add comment",
         variant: "destructive",
       })
     } finally {
@@ -188,39 +208,38 @@ export default function HomeDetailPage() {
     }
 
     try {
+      console.log("[v0] Toggling like for home:", params.id)
       const res = await fetch(`/api/homes/${params.id}/likes`, {
         method: "POST",
       })
 
+      console.log("[v0] Like toggle response status:", res.status)
+
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] Like toggle data:", data)
         setHasLiked(data.liked)
         setLikesCount(prev => data.liked ? prev + 1 : prev - 1)
+        toast({
+          title: data.liked ? "Added to favorites" : "Removed from favorites",
+        })
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        console.error("[v0] Failed to toggle like:", errorData)
+        throw new Error(errorData.error || "Failed to toggle like")
       }
     } catch (error) {
+      console.error("[v0] Error toggling like:", error)
       toast({
         title: "Error",
-        description: "Failed to toggle like",
+        description: error instanceof Error ? error.message : "Failed to toggle like",
         variant: "destructive",
       })
     }
   }
 
-  const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: home?.name,
-        text: home?.short_description,
-        url: window.location.href,
-      })
-    } catch (error) {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href)
-      toast({
-        title: "Link copied",
-        description: "Home link copied to clipboard",
-      })
-    }
+  const handleShare = () => {
+    setIsShareModalOpen(true)
   }
 
   const nextImage = () => {
@@ -454,6 +473,17 @@ export default function HomeDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {home && (
+        <ShareModal
+          open={isShareModalOpen}
+          onOpenChange={setIsShareModalOpen}
+          url={typeof window !== 'undefined' ? window.location.href : ''}
+          title={home.name}
+          description={home.short_description || home.full_description}
+        />
+      )}
     </div>
   )
 }
