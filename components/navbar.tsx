@@ -199,11 +199,9 @@ export function Navbar() {
         { href: "/tour-details", label: "DETAILS" },
         ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORS" }] : []),
         ...(enableAuction ? [{ href: "/auctions", label: "AUCTION" }] : []),
-        ...(enableShop ? [{ href: "/shop", label: "SHOP" }] : []),
-        ...(enableVoting ? [{ href: "/voting", label: "VOTING" }] : []),
         ...(enableDonation ? [{ href: "/donate", label: "DONATE" }] : []),
         ...(enableGallery ? [{ href: "/gallery", label: "GALLERY" }] : []),
-        ...(enableRegistration ? [{ href: "/tickets", label: "TICKETS" }] : []),
+        ...(enableRegistration ? [{ href: "/tickets", label: "PURCHASE NOW" }] : []),
       ]
 
   const logoUrl = event?.logo_image_url

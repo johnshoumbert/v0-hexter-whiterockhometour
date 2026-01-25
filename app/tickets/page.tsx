@@ -247,9 +247,13 @@ export default function TicketsPage() {
             </Button>
             <div className="flex items-center gap-3 mb-2">
               <Ticket className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl md:text-4xl font-bold">{event.event_name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold">Purchase Tickets & Items</h1>
             </div>
-            <p className="text-muted-foreground text-lg">Select your ticket type and quantity</p>
+            <p className="text-muted-foreground text-lg">Select your ticket type, quantity, and any items you'd like to purchase</p>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-6">Event Tickets</h2>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -361,18 +365,14 @@ export default function TicketsPage() {
         {event?.enable_shop && featuredShopItems.length > 0 && (
           <section className="py-16 md:py-24 border-t bg-muted/30">
             <div className="container mx-auto px-4">
-              <div className="mb-12 text-center">
-                <h2 className="text-balance text-3xl font-bold tracking-tight md:text-4xl">
-                  Don't Forget to Get These Items!
-                </h2>
-                <p className="mt-4 text-pretty text-lg text-muted-foreground mx-auto max-w-2xl">
-                  Complete your event experience with these featured items
-                </p>
+              <div className="mb-12">
+                <h2 className="text-3xl font-bold tracking-tight mb-2">Shop Items</h2>
+                <p className="text-lg text-muted-foreground">Complete your event experience with these items</p>
               </div>
               <div className="mx-auto max-w-6xl">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {featuredShopItems.map((item: any) => (
-                    <Card key={item.id} className="overflow-hidden">
+                    <Card key={item.id} className="overflow-hidden flex flex-col">
                       {item.image_url && (
                         <div className="relative w-full h-48 bg-muted">
                           <Image
@@ -389,7 +389,7 @@ export default function TicketsPage() {
                           <CardDescription className="line-clamp-2">{item.description}</CardDescription>
                         )}
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="flex-1 space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-bold">${Number(item.price).toFixed(2)}</span>
                           {item.quantity_type === "limited" && (
@@ -399,20 +399,15 @@ export default function TicketsPage() {
                           )}
                           {item.quantity_type === "preorder" && <Badge variant="secondary">Pre-order</Badge>}
                         </div>
-                        <Button className="w-full" asChild>
-                          <Link href="/shop">
-                            <ShoppingBag className="mr-2 h-4 w-4" />
-                            Shop Now
-                          </Link>
-                        </Button>
                       </CardContent>
+                      <CardFooter>
+                        <Button className="w-full">
+                          <ShoppingBag className="mr-2 h-4 w-4" />
+                          Add to Cart
+                        </Button>
+                      </CardFooter>
                     </Card>
                   ))}
-                </div>
-                <div className="mt-8 text-center">
-                  <Button size="lg" asChild variant="outline">
-                    <Link href="/shop">View All Items</Link>
-                  </Button>
                 </div>
               </div>
             </div>
