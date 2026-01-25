@@ -69,7 +69,7 @@ export const sql = new Proxy(() => {}, sqlHandler) as ReturnType<typeof neon>
 // Helper function to execute queries with error handling
 export async function query<T = any>(queryText: string, params: any[] = []): Promise<T[]> {
   try {
-    const result = await sql(queryText, params)
+    const result = await sql.query(queryText, params)
     return result as T[]
   } catch (error) {
     console.error("[v0] Database query error:", error)
