@@ -205,14 +205,30 @@ export default function TheHomesPage() {
         <div className="space-y-24">
           {homes.map((home) => {
             const currentIndex = currentImageIndexes[home.id] || 0
-            const currentImage = home.item_images?.[currentIndex] || "/placeholder.jpg"
+            const hasImages = home.item_images && Array.isArray(home.item_images) && home.item_images.length > 0
+            const currentImage = hasImages ? home.item_images[currentIndex] || home.item_images[0] : null
             const isExpanded = expandedDescriptions[home.id]
 
             return (
               <div key={home.id} className="grid md:grid-cols-2 gap-8 items-start">
                 {/* Carousel */}
                 <div className="relative aspect-[4/3] bg-muted overflow-hidden group">
-                  <Image src={currentImage} alt={home.name} fill className="object-cover" />
+                  {currentImage ? (
+                    <Image 
+                      src={currentImage} 
+                      alt={home.name} 
+                      fill 
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">No image available</p>
+                    </div>
+                  )}
 
                   {/* Edit Button for Admins */}
                   {isEventAdmin && (
@@ -225,7 +241,7 @@ export default function TheHomesPage() {
                   )}
 
                   {/* Navigation Arrows */}
-                  {home.item_images && home.item_images.length > 1 && (
+                  {hasImages && home.item_images.length > 1 && (
                     <>
                       <button
                         onClick={() => navigateCarousel(home.id, "prev")}
@@ -245,7 +261,7 @@ export default function TheHomesPage() {
                   )}
 
                   {/* Carousel Indicators */}
-                  {home.item_images && home.item_images.length > 1 && (
+                  {hasImages && home.item_images.length > 1 && (
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                       {home.item_images.map((_, idx) => (
                         <button
