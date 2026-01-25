@@ -193,16 +193,12 @@ export function Navbar() {
         { href: "/demo-auction", label: "Demo Auction" },
       ]
     : [
-        { href: "/", label: "Home" },
         { href: "/the-homes", label: "THE HOMES" },
-        { href: "/history", label: "History" },
-        ...(enableAuction ? [{ href: "/auctions", label: "Auction" }] : []), // Only show auction link if enableAuction is true
-        ...(enableShop ? [{ href: "/shop", label: "Shop" }] : []), // Added shop navigation link conditionally
-        ...(enableSponsors ? [{ href: "/sponsor", label: "Sponsor" }] : []), // Added sponsor navigation link conditionally
-        ...(enableRegistration ? [{ href: "/tickets", label: "Tickets" }] : []),
-        ...(enableVoting ? [{ href: "/voting", label: "Voting" }] : []),
-        ...(enableDonation ? [{ href: "/donate", label: "Donate" }] : []),
-        ...(enableGallery ? [{ href: "/gallery", label: "Gallery" }] : []),
+        { href: "/history", label: "HISTORY" },
+        { href: "/tour-details", label: "TOUR DETAILS" },
+        ...(enableSponsors ? [{ href: "/sponsor", label: "SPONSORSHIPS" }] : []),
+        { href: "/contact", label: "CONTACT US" },
+        ...(enableRegistration ? [{ href: "/tickets", label: "GET YOUR TICKETS NOW" }] : []),
       ]
 
   const logoUrl = event?.logo_image_url
