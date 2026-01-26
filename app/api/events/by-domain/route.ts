@@ -84,27 +84,50 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Production domain mappings (hardcoded until DB is updated)
+    const productionDomainMap: Record<string, string> = {
+      "whiterock-2025.ourneighborhoodtour.com": "d42fcc36-3f53-4a65-982c-373776747c44",
+    }
+
     /**
      * 🔥 EXACT MATCH ONLY 🔥
      * We store full domains in the DB
      * e.g. whiterock-2025.ourneighborhoodtour.com
      */
-    const eventResult = await safeQuery(
-      async () => sql`
-        SELECT *
-        FROM events
-        WHERE application_name = 'hometour'
-        AND LOWER(
-          REGEXP_REPLACE(
-            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-            '^www\\.',
-            ''
-          )
-        ) = ${domain}
-        LIMIT 1
-      `,
-      []
-    )
+    let eventResult: any[] = []
+    
+    // Check if this is a known production domain
+    const mappedEventId = productionDomainMap[domain]
+    if (mappedEventId) {
+      console.log("[by-domain] Production domain matched, using mapped event ID:", mappedEventId)
+      eventResult = await safeQuery(
+        async () => sql`
+          SELECT *
+          FROM events
+          WHERE id = ${mappedEventId}
+          LIMIT 1
+        `,
+        []
+      )
+    } else {
+      // Standard domain lookup
+      eventResult = await safeQuery(
+        async () => sql`
+          SELECT *
+          FROM events
+          WHERE application_name = 'hometour'
+          AND LOWER(
+            REGEXP_REPLACE(
+              REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+              '^www\\.',
+              ''
+            )
+          ) = ${domain}
+          LIMIT 1
+        `,
+        []
+      )
+    }
 
     console.log("[by-domain] Event query count:", eventResult.length)
 
