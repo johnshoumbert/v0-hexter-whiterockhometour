@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
     console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
 
     // Determine application based on domain
-    const isOurNeighborhoodTour = domain.includes('ourneighboorhoodtour.com')
+    const isOurNeighborhoodTour = domain.includes('ourneighborhoodtour.com')
     const applicationName = isOurNeighborhoodTour ? 'hometour' : 'myschoolauction'
     console.log("[v0] Domain-based application filter:", applicationName)
 
