@@ -173,7 +173,7 @@ export default function TheHomesPage() {
       {/* Hero Section */}
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         <Image
-          src="/images/design-mode/image.png.jpeg"
+          src="https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/whiterockhometour/19_11737-rogue-way-52.jpg"
           alt="The Homes"
           fill
           className="object-cover"
