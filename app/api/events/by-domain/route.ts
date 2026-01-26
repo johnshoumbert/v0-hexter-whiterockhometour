@@ -187,6 +187,11 @@ export async function GET(request: NextRequest) {
     const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
     console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
 
+    // Determine application based on domain
+    const isOurNeighborhoodTour = domain.includes('ourneighboorhoodtour.com')
+    const applicationName = isOurNeighborhoodTour ? 'hometour' : 'myschoolauction'
+    console.log("[v0] Domain-based application filter:", applicationName)
+
     console.log("[v0] Strategy 1: Trying exact match for:", domain)
     eventResult = await safeQuery(
       async () =>
@@ -200,6 +205,7 @@ export async function GET(request: NextRequest) {
           ''
         )
       ) = ${domain}
+      AND application_name = ${applicationName}
       LIMIT 1
     `,
       [],
@@ -222,6 +228,7 @@ export async function GET(request: NextRequest) {
             ''
           )
         ) = ${domain}
+        AND application_name = ${applicationName}
         LIMIT 1
       `,
         [],
@@ -247,6 +254,7 @@ export async function GET(request: NextRequest) {
             ''
           )
         ) = ${subdomain}
+        AND application_name = ${applicationName}
         LIMIT 1
       `,
         [],
@@ -268,6 +276,7 @@ export async function GET(request: NextRequest) {
               ''
             )
           ) LIKE ${subdomain + "%"}
+          AND application_name = ${applicationName}
           LIMIT 1
         `,
           [],
@@ -294,6 +303,7 @@ export async function GET(request: NextRequest) {
             ''
           )
         ) LIKE ${"%" + baseDomain + "%"}
+        AND application_name = ${applicationName}
         LIMIT 1
       `,
         [],
@@ -309,6 +319,7 @@ export async function GET(request: NextRequest) {
         SELECT *
         FROM events
         WHERE LOWER(domain) != 'localhost'
+        AND application_name = ${applicationName}
         ORDER BY created_at DESC
         LIMIT 1
       `,
