@@ -2,312 +2,386 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { normalizeDomain } from "@/lib/normalize-domain"
 
-export const dynamic = "force-dynamic"
-export const runtime = "nodejs"
-
-/**
- * Safe DB wrapper with timeout
- */
-async function safeQuery<T>(
-  queryFn: () => Promise<T>,
-  label: string,
-  timeoutMs: number = 10000
-): Promise<T> {
-  console.log(`[v0][by-domain] Starting query: ${label}`)
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
+async function safeQuery<T = any>(queryFn: () => Promise<T>, fallback: T): Promise<T> {
   try {
-    const result = await Promise.race([
-      queryFn(),
-      new Promise<never>((_, reject) => {
-        controller.signal.addEventListener('abort', () => {
-          reject(new Error(`Query timeout after ${timeoutMs}ms`))
-        })
-      })
-    ])
-    console.log(`[v0][by-domain] Query completed: ${label}`)
-    return result
+    return await queryFn()
   } catch (error: any) {
-    const message = error?.message || String(error)
-    console.error(`[v0][by-domain][DB ERROR][${label}]`, message)
-
-    if (message.includes("429") || message.includes("Too Many Requests")) {
-      throw new Error("RATE_LIMIT")
+    const errorMessage = error?.message || String(error)
+    if (errorMessage.includes("Too Many Requests") || errorMessage.includes("429")) {
+      console.log("[v0] Rate limit detected, using fallback")
+      return fallback
     }
-
     throw error
-  } finally {
-    clearTimeout(timeoutId)
-  }
-}
-
-/**
- * Guard helper — fail fast on invalid state
- */
-function invariant(condition: any, message: string): asserts condition {
-  if (!condition) {
-    console.error(`[v0][by-domain] Invariant failed: ${message}`)
-    throw new Error(message)
   }
 }
 
 export async function GET(request: NextRequest) {
-  console.log("[v0][by-domain] === Request started ===")
-  
   try {
-    /* ---------------------------------------------
-     * Check database configuration first
-     * --------------------------------------------- */
-    console.log("[v0][by-domain] Step 1: Checking database configuration")
-    const dbUrl = process.env.NEON_DATABASE_URL ||
-      process.env.NEON_POSTGRES_URL ||
-      process.env.DATABASE_URL ||
-      process.env.POSTGRES_URL
+    const { searchParams } = new URL(request.url)
+    const host = searchParams.get("host") || request.headers.get("host") || ""
 
-    if (!dbUrl) {
-      console.error("[v0][by-domain] No database URL configured")
-      return NextResponse.json(
-        { error: "Database not configured", details: "Missing database connection string" },
-        { status: 503 }
-      )
-    }
-    console.log("[v0][by-domain] Database URL configured: Yes")
+    console.log("[v0] by-domain request detected, fetching for host:", host)
 
-    /* ---------------------------------------------
-     * Resolve host + domain
-     * --------------------------------------------- */
-    console.log("[v0][by-domain] Step 2: Resolving host and domain")
-    let rawHost: string | null = null
-    
-    try {
-      const url = new URL(request.url)
-      const searchParams = url.searchParams
-      rawHost = searchParams.get("host") || request.headers.get("host")
-      console.log("[v0][by-domain] Raw host resolved:", rawHost)
-    } catch (urlError) {
-      console.error("[v0][by-domain] URL parsing error:", urlError)
-      return NextResponse.json(
-        { error: "Invalid request URL", details: String(urlError) },
-        { status: 400 }
-      )
-    }
+    let domain = normalizeDomain(host)
+    console.log("[v0] Normalized domain:", domain)
 
-    if (!rawHost) {
-      console.error("[v0][by-domain] Missing Host header")
-      return NextResponse.json(
-        { error: "Missing Host header" },
-        { status: 400 }
-      )
-    }
+    const isLocalhost =
+      !domain ||
+      domain === "" ||
+      domain === "localhost" ||
+      domain === "127.0.0.1" ||
+      domain.includes("vusercontent.net")
 
-    let domain: string
-    try {
-      domain = normalizeDomain(rawHost)
-      console.log("[v0][by-domain] Normalized domain:", domain)
-    } catch (normalizeError) {
-      console.error("[v0][by-domain] Domain normalization error:", normalizeError)
-      return NextResponse.json(
-        { error: "Invalid domain", details: String(normalizeError) },
-        { status: 400 }
-      )
-    }
-
-    if (!domain) {
-      console.error("[v0][by-domain] Normalized domain is empty")
-      return NextResponse.json(
-        { error: "Normalized domain is empty" },
-        { status: 400 }
-      )
-    }
-
-    const isPreview = domain.includes("vusercontent.net")
-    const isLocalhost = domain === "localhost" || domain === "127.0.0.1"
-    console.log("[v0][by-domain] isPreview:", isPreview, "isLocalhost:", isLocalhost)
-
-    /* ---------------------------------------------
-     * Localhost handling
-     * --------------------------------------------- */
     if (isLocalhost) {
-      console.log("[v0][by-domain] Step 3: Localhost event lookup")
-      try {
-        const rows = await safeQuery(
-          () =>
-            sql`
-              SELECT *
-              FROM events
-              WHERE domain = 'localhost'
-                AND application_name = 'hometour'
-              LIMIT 1
-            `,
-          "localhost-event"
-        )
-
-        if (!rows.length) {
-          console.log("[v0][by-domain] No localhost event found")
-          return NextResponse.json(
-            { error: "No localhost event configured" },
-            { status: 404 }
+      console.log("[v0] Local/dev/empty domain detected - returning localhost event")
+      const eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+            '^www\\.',
+            ''
           )
-        }
-
-        console.log("[v0][by-domain] Localhost event found")
-        return NextResponse.json({ event: rows[0] })
-      } catch (localhostError) {
-        console.error("[v0][by-domain] Localhost query error:", localhostError)
-        throw localhostError
-      }
-    }
-
-    /* ---------------------------------------------
-     * Main platform domain — no event
-     * --------------------------------------------- */
-    if (domain === "hometour.com") {
-      console.log("[v0][by-domain] Main platform domain - returning 404")
-      return NextResponse.json(
-        { error: "Main platform domain — no event" },
-        { status: 404 }
+        ) = 'localhost' and application_name='hometour'
+        LIMIT 1
+      `,
+        [],
       )
-    }
+      console.log("[v0] Localhost event query result count:", eventResult.length)
 
-    /* ---------------------------------------------
-     * Domain override for preview links
-     * --------------------------------------------- */
-    if (isPreview) {
-      console.log("[v0][by-domain] Preview domain detected")
-      try {
-        const url = new URL(request.url)
-        const overrideDomain = url.searchParams.get("domain")
-        if (overrideDomain) {
-          const override = normalizeDomain(overrideDomain)
-          console.log("[v0][by-domain] Preview override domain:", override)
-        }
-      } catch (previewError) {
-        console.warn("[v0][by-domain] Preview domain parsing error:", previewError)
-      }
-    }
+      if (eventResult.length > 0) {
+        const eventData = eventResult[0]
+        console.log("[v0] Localhost event found:", eventData.event_name, "id:", eventData.id)
 
-    /* ---------------------------------------------
-     * EVENT LOOKUP — exact match ONLY
-     * --------------------------------------------- */
-    console.log("[v0][by-domain] Step 4: Event lookup for domain:", domain)
-    let eventRows: any[]
-    try {
-      eventRows = await safeQuery(
-        () =>
-          sql`
-            SELECT *
-            FROM events
-            WHERE application_name = 'hometour'
-              AND LOWER(
-                REGEXP_REPLACE(
-                  REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-                  '^www\\.',
-                  ''
-                )
-              ) = ${domain}
-            LIMIT 1
-          `,
-        "event-lookup"
-      )
-    } catch (eventLookupError) {
-      console.error("[v0][by-domain] Event lookup query error:", eventLookupError)
-      throw eventLookupError
-    }
-
-    if (!eventRows.length) {
-      console.warn("[v0][by-domain] Event not found for domain:", domain)
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      )
-    }
-
-    const eventData = eventRows[0]
-
-    if (!eventData?.id) {
-      console.error("[v0][by-domain] Event missing ID")
-      return NextResponse.json(
-        { error: "Event data invalid" },
-        { status: 500 }
-      )
-    }
-
-    console.log("[v0][by-domain] Event found:", eventData.event_name, "ID:", eventData.id)
-
-    /* ---------------------------------------------
-     * Theme lookup (optional)
-     * --------------------------------------------- */
-    console.log("[v0][by-domain] Step 5: Theme lookup")
-    let theme = null
-
-    try {
-      const themeRows = await safeQuery(
-        () =>
-          sql`
+        // Try to fetch theme separately
+        let themeData = null
+        try {
+          const themeResult = await safeQuery(
+            async () =>
+              sql`
             SELECT primary_color, secondary_color, logo_url
             FROM themes
-            WHERE event_id = ${eventData.id}
+            WHERE event_id = ${eventData.id} 
             LIMIT 1
           `,
-        "theme-lookup"
-      )
+            [],
+          )
+          if (themeResult.length > 0) {
+            themeData = themeResult[0]
+          }
+        } catch (error) {
+          console.log("[v0] Theme lookup failed, using fallback")
+        }
 
-      if (themeRows.length) {
-        theme = themeRows[0]
-        console.log("[v0][by-domain] Theme found")
-      } else {
-        console.log("[v0][by-domain] No theme found")
-      }
-    } catch (themeError) {
-      console.warn("[v0][by-domain] Theme lookup failed:", themeError)
-    }
-
-    /* ---------------------------------------------
-     * Ticket + pricing tiers
-     * --------------------------------------------- */
-    console.log("[v0][by-domain] Step 6: Ticket lookup")
-    let tickets: any[] = []
-
-    try {
-      const ticketRows = await safeQuery(
-        () =>
-          sql`
-            SELECT id, name, description, price,
-                   quantity_available, quantity_sold, is_active
+        let ticketsData = []
+        try {
+          const ticketsResult = await safeQuery(
+            async () =>
+              sql`
+            SELECT id, name, description, price, quantity_available, quantity_sold, is_active
             FROM event_tickets
             WHERE event_id = ${eventData.id}
             ORDER BY price ASC
           `,
-        "tickets-lookup"
+            [],
+          )
+
+          console.log("[v0] Tickets query result count:", ticketsResult.length)
+          console.log("[v0] Tickets found for event:", eventData.id, "count:", ticketsResult.length)
+
+          // Fetch pricing tiers for each ticket
+          const now = new Date()
+          ticketsData = await Promise.all(
+            ticketsResult.map(async (ticket: any) => {
+              try {
+                const tiers = await safeQuery(
+                  async () =>
+                    sql`
+                    SELECT id, tier_name, price, start_date, end_date, display_order
+                    FROM pricing_tiers
+                    WHERE ticket_id = ${ticket.id}
+                    ORDER BY display_order ASC, start_date ASC NULLS LAST
+                  `,
+                  [],
+                )
+
+                console.log("[v0] Pricing tiers for ticket", ticket.name, ":", tiers.length)
+
+                // Determine which tier is currently active
+                const tiersWithStatus = tiers.map((tier: any) => {
+                  const startDate = tier.start_date ? new Date(tier.start_date) : null
+                  const endDate = tier.end_date ? new Date(tier.end_date) : null
+
+                  const isAfterStart = !startDate || now >= startDate
+                  const isBeforeEnd = !endDate || now <= endDate
+                  const isActive = isAfterStart && isBeforeEnd
+
+                  return {
+                    id: tier.id,
+                    name: tier.tier_name,
+                    price: tier.price,
+                    startDate: tier.start_date,
+                    endDate: tier.end_date,
+                    displayOrder: tier.display_order,
+                    isActive,
+                  }
+                })
+
+                return {
+                  ...ticket,
+                  pricingTiers: tiersWithStatus,
+                }
+              } catch (error) {
+                console.log("[v0] Error fetching pricing tiers for ticket:", ticket.id)
+                return ticket
+              }
+            }),
+          )
+        } catch (error) {
+          console.log("[v0] Tickets lookup failed, using fallback")
+        }
+
+        const event = {
+          ...eventData,
+          theme: themeData
+            ? {
+                primary_color: themeData.primary_color,
+                secondary_color: themeData.secondary_color,
+                logo_url: themeData.logo_url,
+              }
+            : null,
+          tickets: ticketsData, // Include tickets in event response
+        }
+
+        console.log("[v0] Shop title from database:", eventData.shop_title)
+        console.log("[v0] Shop description from database:", eventData.shop_description)
+        console.log("[v0] Shop title in event object:", event.shop_title)
+        console.log("[v0] Shop description in event object:", event.shop_description)
+
+        console.log("[v0] Final event object tickets count:", event.tickets?.length || 0)
+        console.log("[v0] Event found and returning:", event.event_name)
+        return NextResponse.json({ event })
+      } else {
+        console.log("[v0] No localhost event found in database")
+        return NextResponse.json({ error: "No localhost event configured" }, { status: 404 })
+      }
+    }
+
+    // Check if this is the main platform domain (no event)
+    if (domain === "hometour.com") {
+      console.log("[v0] Main domain detected - no event")
+      return NextResponse.json({ error: "Main domain - no event" }, { status: 404 })
+    }
+
+    const isVusercontentPreview = host.includes(".vusercontent.net")
+
+    // If it's a preview domain, try to use the domain query param if available
+    if (isVusercontentPreview && searchParams.get("domain")) {
+      domain = searchParams.get("domain") || domain
+      console.log("[v0] Preview domain detected, using query param domain:", domain)
+    }
+
+    let eventResult = []
+
+    const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
+    console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
+
+    console.log("[v0] Strategy 1: Trying exact match for:", domain)
+    eventResult = await safeQuery(
+      async () =>
+        sql`
+      SELECT *
+      FROM events
+      WHERE LOWER(
+        REGEXP_REPLACE(
+          REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+          '^www\\.',
+          ''
+        )
+      ) = ${domain}
+
+        and application_name='hometour'
+      LIMIT 1
+    `,
+      [],
+    )
+    console.log("[v0] Strategy 1 result count:", eventResult.length)
+
+    // Strategy 2: If it's a hometour.com subdomain, try matching just the subdomain part
+    if (eventResult.length === 0 && domain.includes(".hometour.com")) {
+      const subdomain = domain.split(".hometour.com")[0]
+      console.log("[v0] Strategy 2: Trying subdomain match for:", subdomain)
+
+      // Try matching against domains that are just the subdomain
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+            '^www\\.',
+            ''
+          )
+        ) = ${subdomain}
+
+        and application_name='hometour'
+        LIMIT 1
+      `,
+        [],
       )
-      console.log("[v0][by-domain] Found", ticketRows.length, "tickets")
+      console.log("[v0] Strategy 2a result count:", eventResult.length)
 
+      // Also try matching against full subdomain URLs
+      if (eventResult.length === 0) {
+        console.log("[v0] Strategy 2b: Trying full subdomain URL match")
+        eventResult = await safeQuery(
+          async () =>
+            sql`
+          SELECT *
+          FROM events
+          WHERE LOWER(
+            REGEXP_REPLACE(
+              REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+              '^www\\.',
+              ''
+            )
+          ) LIKE ${subdomain + "%"}
+
+          and application_name='hometour'
+          LIMIT 1
+        `,
+          [],
+        )
+        console.log("[v0] Strategy 2b result count:", eventResult.length)
+      }
+    }
+
+    // Strategy 3: For custom domains, try partial match
+    if (eventResult.length === 0 && !domain.includes("hometour.com")) {
+      console.log("[v0] Strategy 3: Trying custom domain partial match")
+      const domainParts = domain.split(".")
+      const baseDomain = domainParts.slice(-2).join(".")
+
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+            '^www\\.',
+            ''
+          )
+        ) LIKE ${"%" + baseDomain + "%"}
+        and application_name='hometour'
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 3 result count:", eventResult.length)
+    }
+
+    if (eventResult.length === 0 && isVusercontentPreview) {
+      console.log("[v0] Strategy 4: Preview domain fallback - finding most recent non-localhost event")
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(domain) != 'localhost' and application_name='hometour'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 4 result count:", eventResult.length)
+    }
+
+    if (eventResult.length === 0) {
+      console.log("[v0] No event found for domain:", domain)
+      console.log("[v0] Tried strategies: exact match, subdomain match, custom domain match, preview fallback")
+      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    }
+
+    const eventData = eventResult[0]
+    console.log("[v0] Event found:", eventData.event_name, "with domain:", eventData.domain)
+
+    // Try to fetch theme separately
+    let themeData = null
+    try {
+      const themeResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT primary_color, secondary_color, logo_url
+        FROM themes
+        WHERE event_id = ${eventData.id}
+        LIMIT 1
+      `,
+        [],
+      )
+      if (themeResult.length > 0) {
+        themeData = themeResult[0]
+      }
+    } catch (error) {
+      console.log("[v0] Theme lookup failed, using fallback")
+      try {
+        const fallbackTheme = await safeQuery(async () => sql`SELECT * FROM themes LIMIT 1`, [])
+        if (fallbackTheme.length > 0) {
+          themeData = fallbackTheme[0]
+        }
+      } catch (e) {
+        console.log("[v0] No themes available")
+      }
+    }
+
+    let ticketsData = []
+    try {
+      const ticketsResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT id, name, description, price, quantity_available, quantity_sold, is_active
+        FROM event_tickets
+        WHERE event_id = ${eventData.id}
+        ORDER BY price ASC
+      `,
+        [],
+      )
+
+      console.log("[v0] Tickets query result count:", ticketsResult.length)
+      console.log("[v0] Tickets found for event:", eventData.id, "count:", ticketsResult.length)
+
+      // Fetch pricing tiers for each ticket
       const now = new Date()
-
-      tickets = await Promise.all(
-        ticketRows.map(async (ticket: any) => {
-          if (!ticket?.id) {
-            console.warn("[v0][by-domain] Ticket missing ID, skipping")
-            return { ...ticket, pricingTiers: [] }
-          }
-
+      ticketsData = await Promise.all(
+        ticketsResult.map(async (ticket: any) => {
           try {
             const tiers = await safeQuery(
-              () =>
+              async () =>
                 sql`
-                  SELECT id, tier_name, price,
-                         start_date, end_date, display_order
-                  FROM pricing_tiers
-                  WHERE ticket_id = ${ticket.id}
-                  ORDER BY display_order ASC
-                `,
-              `pricing-tiers-${ticket.id}`
+                SELECT id, tier_name, price, start_date, end_date, display_order
+                FROM pricing_tiers
+                WHERE ticket_id = ${ticket.id}
+                ORDER BY display_order ASC, start_date ASC NULLS LAST
+              `,
+              [],
             )
 
-            const pricingTiers = tiers.map((tier: any) => {
-              const start = tier.start_date ? new Date(tier.start_date) : null
-              const end = tier.end_date ? new Date(tier.end_date) : null
+            console.log("[v0] Pricing tiers for ticket", ticket.name, ":", tiers.length)
+
+            // Determine which tier is currently active
+            const tiersWithStatus = tiers.map((tier: any) => {
+              const startDate = tier.start_date ? new Date(tier.start_date) : null
+              const endDate = tier.end_date ? new Date(tier.end_date) : null
+
+              const isAfterStart = !startDate || now >= startDate
+              const isBeforeEnd = !endDate || now <= endDate
+              const isActive = isAfterStart && isBeforeEnd
 
               return {
                 id: tier.id,
@@ -316,51 +390,47 @@ export async function GET(request: NextRequest) {
                 startDate: tier.start_date,
                 endDate: tier.end_date,
                 displayOrder: tier.display_order,
-                isActive: (!start || now >= start) && (!end || now <= end),
+                isActive,
               }
             })
 
-            return { ...ticket, pricingTiers }
-          } catch (tierError) {
-            console.error("[v0][by-domain] Pricing tier failure for ticket:", ticket.id, tierError)
-            return { ...ticket, pricingTiers: [] }
+            return {
+              ...ticket,
+              pricingTiers: tiersWithStatus,
+            }
+          } catch (error) {
+            console.log("[v0] Error fetching pricing tiers for ticket:", ticket.id)
+            return ticket
           }
-        })
+        }),
       )
-    } catch (ticketError) {
-      console.error("[v0][by-domain] Ticket lookup failed:", ticketError)
+    } catch (error) {
+      console.log("[v0] Tickets lookup failed, using fallback")
     }
 
-    /* ---------------------------------------------
-     * Final response
-     * --------------------------------------------- */
-    console.log("[v0][by-domain] === Request completed successfully ===")
-    return NextResponse.json({
-      event: {
-        ...eventData,
-        theme,
-        tickets,
-      },
-    })
-  } catch (error: any) {
-    console.error("[v0][by-domain] === Fatal handler error ===")
-    console.error("[v0][by-domain] Error name:", error?.name)
-    console.error("[v0][by-domain] Error message:", error?.message)
-    console.error("[v0][by-domain] Error stack:", error?.stack)
-
-    if (error.message === "RATE_LIMIT") {
-      return NextResponse.json(
-        { error: "Rate limited — please retry" },
-        { status: 429 }
-      )
+    const event = {
+      ...eventData,
+      theme: themeData
+        ? {
+            primary_color: themeData.primary_color,
+            secondary_color: themeData.secondary_color,
+            logo_url: themeData.logo_url,
+          }
+        : null,
+      tickets: ticketsData, // Include tickets in event response
     }
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch event",
-        details: error?.message || String(error),
-      },
-      { status: 500 }
-    )
+    console.log("[v0] Shop title from database:", eventData.shop_title)
+    console.log("[v0] Shop description from database:", eventData.shop_description)
+    console.log("[v0] Shop title in event object:", event.shop_title)
+    console.log("[v0] Shop description in event object:", event.shop_description)
+
+    console.log("[v0] Final event object tickets count:", event.tickets?.length || 0)
+    console.log("[v0] Event found and returning:", event.event_name)
+    return NextResponse.json({ event })
+  } catch (error) {
+    console.error("[v0] Error fetching event by domain:", error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: "Failed to fetch event", details: errorMessage }, { status: 500 })
   }
 }
