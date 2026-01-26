@@ -172,7 +172,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Countdown Banner */}
-      <div className="bg-black text-white py-2 px-4 text-center text-sm tracking-wider">
+      <div className="bg-black text-white py-2 px-4 text-center text-sm tracking-wider mt-16 md:mt-0">
         THANK YOU FOR A GREAT 17TH YEAR, DALLAS!
       </div>
 
@@ -246,14 +246,6 @@ export default function HomePage() {
       {/* Ticket Status Section */}
       <TicketStatusSection />
 
-      {/* Testimonials Section */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-wide">
-          WHAT PEOPLE ARE SAYING ABOUT THE WRHT
-        </h2>
-        {event?.id && <TestimonialCarousel eventId={event.id} autoAdvanceInterval={5 * 60 * 1000} />}
-      </div>
-
       {/* Please Join Us Section */}
       <div className="grid md:grid-cols-2 gap-0 min-h-[600px]">
         {/* Left Content */}
@@ -285,6 +277,14 @@ export default function HomePage() {
             backgroundImage: `url('https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/Hero-Join-1234-09XWkSY7OWOxq6M1CvOJALEnVHEfcH')`,
           }}
         />
+      </div>
+
+      {/* Testimonials Section */}
+      <div className="container mx-auto px-4 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-wide">
+          WHAT PEOPLE ARE SAYING ABOUT THE WRHT
+        </h2>
+        {event?.id && <TestimonialCarousel eventId={event.id} autoAdvanceInterval={5 * 60 * 1000} />}
       </div>
 
       {/* Sponsors Section */}
