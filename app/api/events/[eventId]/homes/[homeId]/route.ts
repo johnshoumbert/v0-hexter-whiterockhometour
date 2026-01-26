@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: { eventId: string; homeId: string } }
 ) {
   try {
-    const { eventId, homeId } = params
+    const { eventId, homeId } = await params
 
     const result = await sql`
       SELECT *
@@ -32,7 +32,7 @@ export async function PATCH(
   { params }: { params: { eventId: string; homeId: string } }
 ) {
   try {
-    const { eventId, homeId } = params
+    const { eventId, homeId } = await params
     const user = await getSession()
 
     if (!user) {
@@ -106,12 +106,88 @@ export async function PATCH(
   }
 }
 
+export async function PUT(
+  request: Request,
+  { params }: { params: { eventId: string; homeId: string } }
+) {
+  try {
+    const { eventId, homeId } = await params
+    const user = await getSession()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { isAdmin } = await checkAdminAccess(eventId)
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { 
+      name, 
+      address, 
+      sponsor, 
+      short_description, 
+      full_description, 
+      item_images, 
+      directions_url, 
+      display_order 
+    } = body
+
+    // Parse and flatten item_images
+    let parsedImages = null
+    if (item_images) {
+      try {
+        let parsed = typeof item_images === 'string' ? JSON.parse(item_images) : item_images
+        
+        // Ensure it's an array and flatten any nested arrays
+        if (Array.isArray(parsed)) {
+          parsedImages = parsed
+            .flat() // Flatten one level deep
+            .filter(item => typeof item === 'string' && item.length > 0) // Keep only valid strings
+        } else {
+          parsedImages = []
+        }
+      } catch (e) {
+        console.error("[v0] Error parsing item_images:", e)
+        parsedImages = []
+      }
+    }
+    
+    const result = await sql`
+      UPDATE homes
+      SET 
+        name = ${name},
+        address = ${address || null},
+        sponsor = ${sponsor || null},
+        short_description = ${short_description || null},
+        full_description = ${full_description || null},
+        item_images = ${parsedImages || []},
+        directions_url = ${directions_url || null},
+        display_order = ${display_order || 0},
+        updated_at = NOW()
+      WHERE id = ${homeId} AND event_id = ${eventId}
+      RETURNING *
+    `
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Home not found" }, { status: 404 })
+    }
+
+    return NextResponse.json(result[0])
+  } catch (error: any) {
+    console.error("[v0] Error updating home:", error)
+    return NextResponse.json({ error: "Failed to update home" }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: { eventId: string; homeId: string } }
 ) {
   try {
-    const { eventId, homeId } = params
+    const { eventId, homeId } = await params
     const user = await getSession()
 
     if (!user) {
