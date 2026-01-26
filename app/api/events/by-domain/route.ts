@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
         )
       ) = ${domain}
 
-        and aplication_name='hometour'
+        and application_name='hometour'
       LIMIT 1
     `,
       [],
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
           )
         ) = ${subdomain}
 
-        and aplication_name='hometour'
+        and application_name='hometour'
         LIMIT 1
       `,
         [],
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
             )
           ) LIKE ${subdomain + "%"}
 
-          and aplication_name='hometour'
+          and application_name='hometour'
           LIMIT 1
         `,
           [],
@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
             ''
           )
         ) LIKE ${"%" + baseDomain + "%"}
-        and aplication_name='hometour'
+        and application_name='hometour'
         LIMIT 1
       `,
         [],
@@ -287,8 +287,9 @@ export async function GET(request: NextRequest) {
       console.log("[v0] Strategy 3 result count:", eventResult.length)
     }
 
-    if (eventResult.length === 0 && isVusercontentPreview) {
-      console.log("[v0] Strategy 4: Preview domain fallback - finding most recent non-localhost event")
+    // Strategy 4: For Vercel production domains (.vercel.app)
+    if (eventResult.length === 0 && domain.includes(".vercel.app")) {
+      console.log("[v0] Strategy 4: Vercel production domain fallback - finding most recent non-localhost event")
       eventResult = await safeQuery(
         async () =>
           sql`
@@ -303,9 +304,76 @@ export async function GET(request: NextRequest) {
       console.log("[v0] Strategy 4 result count:", eventResult.length)
     }
 
+    // Strategy 5: For custom domains with subdomains (e.g., whiterock-2025.ourneighborhoodtour.com)
+    if (eventResult.length === 0) {
+      console.log("[v0] Strategy 5: Custom domain subdomain match")
+      // Extract the subdomain part (everything before the last two domain parts)
+      const domainParts = domain.split(".")
+      if (domainParts.length >= 3) {
+        const subdomain = domainParts[0] // e.g., "whiterock-2025"
+        console.log("[v0] Strategy 5: Trying subdomain:", subdomain)
+        
+        eventResult = await safeQuery(
+          async () =>
+            sql`
+          SELECT *
+          FROM events
+          WHERE (
+            LOWER(
+              REGEXP_REPLACE(
+                REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+                '^www\\.',
+                ''
+              )
+            ) LIKE ${subdomain + "%"}
+            OR LOWER(event_name) LIKE ${"%" + subdomain.replace("-", " ") + "%"}
+          )
+          and application_name='hometour'
+          LIMIT 1
+        `,
+          [],
+        )
+        console.log("[v0] Strategy 5 result count:", eventResult.length)
+      }
+    }
+
+    // Strategy 6: Preview domain fallback for vusercontent.net
+    if (eventResult.length === 0 && isVusercontentPreview) {
+      console.log("[v0] Strategy 6: Preview domain fallback - finding most recent non-localhost event")
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(domain) != 'localhost' and application_name='hometour'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 6 result count:", eventResult.length)
+    }
+    
+    // Strategy 7: Final fallback - get any hometour event
+    if (eventResult.length === 0) {
+      console.log("[v0] Strategy 7: Final fallback - finding any hometour event")
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE application_name='hometour'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 7 result count:", eventResult.length)
+    }
+
     if (eventResult.length === 0) {
       console.log("[v0] No event found for domain:", domain)
-      console.log("[v0] Tried strategies: exact match, subdomain match, custom domain match, preview fallback")
+      console.log("[v0] Tried strategies: exact match, subdomain match, custom domain match, vercel.app fallback, subdomain fallback, preview fallback, final fallback")
       return NextResponse.json({ error: "Event not found" }, { status: 404 })
     }
 
