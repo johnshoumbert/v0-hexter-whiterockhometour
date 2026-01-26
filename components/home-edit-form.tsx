@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Loader2, Upload, X, Home, Info, Settings, ImageIcon, Trash2 } from "lucide-react"
+import { Loader2, Upload, X, Home, Info, Settings, ImageIcon, Trash2, GripVertical } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { useEvent } from "@/contexts/event-context"
@@ -35,6 +35,7 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
   const [isUploading, setIsUploading] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [imageError, setImageError] = useState<{ [key: number]: boolean }>({})
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
 
   const parseImageUrls = (imageData: any): string[] => {
     if (!imageData) return []
@@ -85,11 +86,39 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
     setIsUploading(true)
 
     try {
-      for (const file of files) {
-        await uploadImage(file, images.length)
+      // Upload all images in sequence, appending each one
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        await uploadImageAppend(file)
       }
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const uploadImageAppend = async (file: File) => {
+    try {
+      const formDataUpload = new FormData()
+      formDataUpload.append("file", file)
+
+      const response = await fetch("/api/blob/upload", {
+        method: "POST",
+        body: formDataUpload,
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to upload image")
+      }
+
+      const { url } = await response.json()
+
+      setImages((prev) => [...prev, url])
+      toast.success("Image uploaded successfully")
+    } catch (error) {
+      console.error("[v0] Error uploading image:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to upload image")
     }
   }
 
@@ -140,6 +169,39 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
       const newErrors = { ...prev }
       delete newErrors[index]
       return newErrors
+    })
+  }
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === dropIndex) return
+
+    setImages((prev) => {
+      const newImages = [...prev]
+      const [draggedItem] = newImages.splice(draggedIndex, 1)
+      newImages.splice(dropIndex, 0, draggedItem)
+      return newImages
+    })
+    setDraggedIndex(null)
+  }
+
+  const moveImage = (fromIndex: number, direction: "up" | "down") => {
+    const toIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1
+    if (toIndex < 0 || toIndex >= images.length) return
+
+    setImages((prev) => {
+      const newImages = [...prev]
+      const [item] = newImages.splice(fromIndex, 1)
+      newImages.splice(toIndex, 0, item)
+      return newImages
     })
   }
 
@@ -374,8 +436,14 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
                   {mainImage ? (
                     <div>
                       <Label>Main Image</Label>
-                      <div className="mt-2 relative group">
-                        <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+                      <div
+                        className="mt-2 relative group"
+                        draggable
+                        onDragStart={() => handleDragStart(0)}
+                        onDragOver={(e) => handleDragOver(e, 0)}
+                        onDrop={(e) => handleDrop(e, 0)}
+                      >
+                        <div className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-move">
                           <Image
                             src={mainImage}
                             alt="Main"
@@ -386,24 +454,32 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
                               target.src = "/placeholder.svg?height=400&width=600"
                             }}
                           />
+                          <div className="absolute top-2 left-2 p-1 bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            <GripVertical className="h-4 w-4 text-white" />
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => removeImage(0)}
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         >
                           <X className="h-4 w-4" />
                         </button>
-                        <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-black/50 rounded-lg">
+                        <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-black/50 rounded-lg pointer-events-none">
                           <Upload className="h-6 w-6 text-white" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleMainImageUpload}
-                            disabled={isUploading}
-                            className="hidden"
-                          />
                         </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleMainImageUpload}
+                          disabled={isUploading}
+                          className="hidden"
+                          id="main-image-upload"
+                        />
+                        <label
+                          htmlFor="main-image-upload"
+                          className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-50 transition-opacity"
+                        />
                       </div>
                     </div>
                   ) : (
@@ -429,30 +505,49 @@ export function HomeEditForm({ initialData, onSuccess, onDelete }: HomeFormProps
                   {additionalImages.length > 0 && (
                     <div>
                       <Label>Additional Images ({additionalImages.length})</Label>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                        Drag and drop images to reorder them
+                      </p>
                       <div className="mt-2 grid grid-cols-3 gap-4">
-                        {additionalImages.map((image, idx) => (
-                          <div key={idx} className="relative group">
-                            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-                              <Image
-                                src={image}
-                                alt={`Image ${idx + 2}`}
-                                fill
-                                className="object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement
-                                  target.src = "/placeholder.svg?height=300&width=300"
-                                }}
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeImage(idx + 1)}
-                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        {additionalImages.map((image, idx) => {
+                          const actualIndex = idx + 1
+                          return (
+                            <div
+                              key={idx}
+                              className="relative group"
+                              draggable
+                              onDragStart={() => handleDragStart(actualIndex)}
+                              onDragOver={(e) => handleDragOver(e, actualIndex)}
+                              onDrop={(e) => handleDrop(e, actualIndex)}
                             >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
+                              <div className="relative aspect-square bg-muted rounded-lg overflow-hidden cursor-move">
+                                <Image
+                                  src={image}
+                                  alt={`Image ${idx + 2}`}
+                                  fill
+                                  className="object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement
+                                    target.src = "/placeholder.svg?height=300&width=300"
+                                  }}
+                                />
+                                <div className="absolute top-1 left-1 p-0.5 bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <GripVertical className="h-3 w-3 text-white" />
+                                </div>
+                                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                  #{idx + 2}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(actualIndex)}
+                                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
