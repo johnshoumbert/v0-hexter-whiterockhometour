@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useEvent } from "@/contexts/event-context"
 import { useAuth } from "@/contexts/auth-context"
-import { Footer } from "@/components/footer"
 import { LoginModal } from "@/components/login-modal"
 import Image from "next/image"
 import { useCartStore, type ShopItem } from "@/stores/cart-store"
@@ -63,7 +62,28 @@ export default function TicketsPage() {
         console.log("[v0] First ticket pricing tiers:", event.tickets[0].pricingTiers || event.tickets[0].pricing_tiers)
       }
       setTickets(event.tickets || [])
-      setFeaturedShopItems(event.featured_shop_items || [])
+      
+      // Fetch shop items separately
+      const fetchShopItems = async () => {
+        try {
+          console.log("[v0] Fetching shop items for event:", event.id)
+          const response = await fetch(`/api/events/${event.id}/shop/items?active=true`)
+          if (response.ok) {
+            const data = await response.json()
+            console.log("[v0] Shop items fetched:", data.items?.length || 0)
+            // Filter for featured items only
+            const featured = (data.items || []).filter((item: any) => item.featured)
+            console.log("[v0] Featured shop items:", featured.length)
+            setFeaturedShopItems(featured)
+          }
+        } catch (error) {
+          console.error("[v0] Error fetching shop items:", error)
+        }
+      }
+      
+      if (event.enable_shop) {
+        fetchShopItems()
+      }
     }
   }, [event])
 
@@ -452,8 +472,6 @@ export default function TicketsPage() {
           </section>
         )}
       </div>
-
-      <Footer />
 
       <Dialog open={showQuantityDialog} onOpenChange={setShowQuantityDialog}>
         <DialogContent>
