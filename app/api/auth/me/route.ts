@@ -4,11 +4,12 @@ import { headers } from "next/headers"
 import { sql } from "@/lib/db"
 import { normalizeDomain } from "@/lib/normalize-domain"
 
-function invariant(condition: any, message: string): asserts condition {
-  if (!condition) throw new Error(message)
-}
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 export async function GET(request: Request) {
+  console.log("[v0][auth/me] Request started")
+  
   try {
     /* ----------------------------------------
      * Check database configuration first
@@ -19,17 +20,26 @@ export async function GET(request: Request) {
       process.env.POSTGRES_URL
 
     if (!dbUrl) {
-      console.error("[auth/me] No database URL configured")
+      console.error("[v0][auth/me] No database URL configured")
       return NextResponse.json(
         { user: null, error: "Database not configured" },
         { status: 200 }
       )
     }
 
+    console.log("[v0][auth/me] Database URL configured")
+
     /* ----------------------------------------
      * Resolve user session (must not hang)
      * ---------------------------------------- */
-    const user = await getSession()
+    let user = null
+    try {
+      user = await getSession()
+      console.log("[v0][auth/me] Session result:", user ? "User found" : "No user")
+    } catch (sessionError) {
+      console.error("[v0][auth/me] Session error:", sessionError)
+      return NextResponse.json({ user: null }, { status: 200 })
+    }
 
     if (!user) {
       return NextResponse.json({ user: null }, { status: 200 })
@@ -42,28 +52,33 @@ export async function GET(request: Request) {
     let eventId: string | null = searchParams.get("eventId")
 
     if (!eventId) {
-      const headersList = headers()
+      const headersList = await headers()
       const host = headersList.get("host")
 
       if (host) {
         const domain = normalizeDomain(host)
+        console.log("[v0][auth/me] Looking up event for domain:", domain)
 
-        const eventRows = await sql`
-          SELECT id
-          FROM events
-          WHERE application_name = 'hometour'
-            AND LOWER(
-              REGEXP_REPLACE(
-                REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-                '^www\\.',
-                ''
-              )
-            ) = ${domain}
-          LIMIT 1
-        `
+        try {
+          const eventRows = await sql`
+            SELECT id
+            FROM events
+            WHERE application_name = 'hometour'
+              AND LOWER(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+                  '^www\\.',
+                  ''
+                )
+              ) = ${domain}
+            LIMIT 1
+          `
 
-        if (eventRows.length > 0) {
-          eventId = eventRows[0].id
+          if (eventRows.length > 0) {
+            eventId = eventRows[0].id
+          }
+        } catch (eventError) {
+          console.error("[v0][auth/me] Event lookup error:", eventError)
         }
       }
     }
@@ -71,28 +86,37 @@ export async function GET(request: Request) {
     /* ----------------------------------------
      * Event admin + role checks
      * ---------------------------------------- */
-    const userIsEventAdmin =
-      eventId ? await isEventAdmin(user.id, eventId) : false
-
+    let userIsEventAdmin = false
     let eventRole: string | undefined
 
     if (eventId) {
-      const eventUserResult = await sql`
-        SELECT role
-        FROM event_users
-        WHERE user_id = ${user.id}
-          AND event_id = ${eventId}
-        LIMIT 1
-      `
+      try {
+        userIsEventAdmin = await isEventAdmin(user.id, eventId)
+      } catch (adminError) {
+        console.error("[v0][auth/me] Admin check error:", adminError)
+      }
 
-      if (eventUserResult.length > 0) {
-        eventRole = eventUserResult[0].role
+      try {
+        const eventUserResult = await sql`
+          SELECT role
+          FROM event_users
+          WHERE user_id = ${user.id}
+            AND event_id = ${eventId}
+          LIMIT 1
+        `
+
+        if (eventUserResult.length > 0) {
+          eventRole = eventUserResult[0].role
+        }
+      } catch (roleError) {
+        console.error("[v0][auth/me] Role lookup error:", roleError)
       }
     }
 
     /* ----------------------------------------
      * Return response (always)
      * ---------------------------------------- */
+    console.log("[v0][auth/me] Returning user response")
     return NextResponse.json({
       user: {
         ...user,
@@ -101,11 +125,11 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("[auth/me] Fatal error:", error)
+    console.error("[v0][auth/me] Fatal error:", error)
 
     return NextResponse.json(
-      { error: "Failed to get session" },
-      { status: 500 }
+      { user: null, error: "Failed to get session" },
+      { status: 200 }
     )
   }
 }

@@ -2,20 +2,32 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { normalizeDomain } from "@/lib/normalize-domain"
 
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
 /**
- * Safe DB wrapper
- * - Only swallows rate-limit errors
- * - Everything else throws
+ * Safe DB wrapper with timeout
  */
 async function safeQuery<T>(
   queryFn: () => Promise<T>,
-  label: string
+  label: string,
+  timeoutMs: number = 10000
 ): Promise<T> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
   try {
-    return await queryFn()
+    const result = await Promise.race([
+      queryFn(),
+      new Promise<never>((_, reject) => {
+        controller.signal.addEventListener('abort', () => {
+          reject(new Error(`Query timeout after ${timeoutMs}ms`))
+        })
+      })
+    ])
+    return result
   } catch (error: any) {
     const message = error?.message || String(error)
-
     console.error(`[v0][DB ERROR][${label}]`, message)
 
     if (message.includes("429") || message.includes("Too Many Requests")) {
@@ -23,6 +35,8 @@ async function safeQuery<T>(
     }
 
     throw error
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 
@@ -36,6 +50,8 @@ function invariant(condition: any, message: string): asserts condition {
 }
 
 export async function GET(request: NextRequest) {
+  console.log("[v0][by-domain] Request started")
+  
   try {
     /* ---------------------------------------------
      * Check database configuration first
