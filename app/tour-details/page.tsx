@@ -11,7 +11,7 @@ import Image from 'next/image'
 
 export default function TourDetailsPage() {
   const { event } = useEvent()
-  const [heroImage, setHeroImage] = useState<string>('')
+  const [heroImage, setHeroImage] = useState<string>('https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/wrth-details-hero-ftxV0yRz3Xh5u0wqHzgWxtaEYb3fsM')
 
   useEffect(() => {
     const fetchHeroImage = async () => {
