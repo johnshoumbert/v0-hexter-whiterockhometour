@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { homeId: string; commentId: string } }
+  { params }: { params: { id: string; commentId: string } }
 ) {
   try {
     const cookieStore = await cookies()
@@ -20,7 +20,7 @@ export async function DELETE(
     // Check if user owns this comment or is admin
     const comment = await sql`
       SELECT * FROM home_comments 
-      WHERE id = ${params.commentId} AND home_id = ${params.homeId}
+      WHERE id = ${params.commentId} AND home_id = ${params.id}
     `
 
     if (comment.length === 0) {

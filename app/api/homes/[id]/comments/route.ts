@@ -3,10 +3,10 @@
 import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 
-export async function GET(request: Request, { params }: { params: Promise<{ homeId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { homeId } = await params
-    console.log("[v0] Fetching comments for home:", homeId)
+    const { id } = await params
+    console.log("[v0] Fetching comments for home:", id)
     
     const comments = await sql`
       SELECT 
@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ home
         u.email as user_email
       FROM home_comments hc
       LEFT JOIN users u ON hc.user_id = u.id
-      WHERE hc.home_id = ${homeId}
+      WHERE hc.home_id = ${id}
       ORDER BY hc.created_at DESC
     `
 
@@ -30,10 +30,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ home
   }
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ homeId: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { homeId } = await params
-    console.log("[v0] Adding comment to home:", homeId)
+    const { id } = await params
+    console.log("[v0] Adding comment to home:", id)
     
     const session = await getSession()
     
@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hom
     console.log("[v0] Inserting comment:", comment)
     const result = await sql`
       INSERT INTO home_comments (home_id, user_id, comment)
-      VALUES (${homeId}, ${session.id}, ${comment})
+      VALUES (${id}, ${session.id}, ${comment})
       RETURNING *
     `
 
