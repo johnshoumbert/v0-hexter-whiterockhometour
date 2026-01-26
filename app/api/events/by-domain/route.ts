@@ -110,6 +110,40 @@ export async function GET(request: NextRequest) {
 
     if (!eventResult.length) {
       console.warn("[by-domain] No event found for:", domain)
+      
+      // For preview/development environments, return a demo event
+      if (domain.includes('vusercontent.net') || domain.includes('localhost') || domain.includes('vercel.app')) {
+        console.log("[by-domain] Preview/dev environment detected, returning demo event")
+        const demoEvent = {
+          id: 'demo-event-id',
+          event_name: 'White Rock Home Tour 2025',
+          start_date: new Date('2025-05-10T09:00:00Z').toISOString(),
+          end_date: new Date('2025-05-10T17:00:00Z').toISOString(),
+          go_live_date: new Date('2025-01-01T00:00:00Z').toISOString(),
+          domain: domain,
+          show_qr_codes: true,
+          allow_likes: true,
+          max_bidding: false,
+          auto_bids: false,
+          hero_image_url: '/placeholder.jpg',
+          enable_gallery: true,
+          enable_voting: false,
+          enable_donation: true,
+          enable_sponsor: true,
+          shop_title: 'Event Merchandise',
+          shop_description: 'Browse our collection of event merchandise and souvenirs',
+          application_name: 'hometour',
+          theme: {
+            primary_color: '#2563eb',
+            secondary_color: '#1e40af',
+            logo_url: '/placeholder-logo.png'
+          },
+          tickets: []
+        }
+        
+        return NextResponse.json({ event: demoEvent })
+      }
+      
       return NextResponse.json(
         { error: "Event not found" },
         { status: 404 }
