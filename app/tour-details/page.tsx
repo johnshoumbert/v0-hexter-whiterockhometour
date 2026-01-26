@@ -1,79 +1,156 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useEvent } from '@/contexts/event-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { ChevronDown, MapPin } from 'lucide-react'
+import { ChevronDown, MapPin, Check } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function TourDetailsPage() {
   const { event } = useEvent()
+  const [heroImage, setHeroImage] = useState<string>('https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/wrth-details-hero-ftxV0yRz3Xh5u0wqHzgWxtaEYb3fsM')
+
+  useEffect(() => {
+    const fetchHeroImage = async () => {
+      if (!event?.id) return
+
+      try {
+        const response = await fetch(`/api/events/${event.id}/settings?page=details&object=details_hero`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.length > 0 && data[0].value) {
+            setHeroImage(data[0].value)
+          }
+        }
+      } catch (error) {
+        console.error('[v0] Error fetching hero image:', error)
+      }
+    }
+
+    fetchHeroImage()
+  }, [event?.id])
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-background py-16 md:py-24">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">The Details</h1>
-          <p className="text-lg text-muted-foreground">
+      {/* Hero Image Header */}
+      <section className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+        {heroImage ? (
+          <Image
+            src={heroImage}
+            alt="Tour Details"
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full bg-muted" />
+        )}
+        
+        {/* Hero Text Overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 text-center px-4 uppercase tracking-wide">
+            The Details
+          </h1>
+          <p className="text-white text-lg md:text-xl italic text-center px-4 max-w-2xl">
             Important information to help you plan your tour experience.
           </p>
         </div>
       </section>
 
-      {/* Details Grid */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
-            <div>
-              <h3 className="text-xl font-bold mb-3 uppercase">What:</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                It's the 17th annual White Rock Home Tour, a self-guided tour showcasing six mid-century and new modern homes
-              </p>
-            </div>
+      {/* Details Content Section */}
+      <section className="relative">
+        <div className="grid lg:grid-cols-2 min-h-[600px] lg:min-h-[800px]">
+          {/* Left Side - Content */}
+          <div className="bg-background px-6 md:px-12 lg:px-16 py-12 lg:py-16 flex items-center">
+            <div className="w-full max-w-xl">
+              <div className="space-y-8">
+                {/* What */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 uppercase">What:</h2>
+                  <div className="flex gap-3">
+                    <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-foreground/90 leading-relaxed">
+                      It's the 17th annual White Rock Home Tour, a self-guided tour showcasing six mid-century and new modern homes
+                    </p>
+                  </div>
+                </div>
 
-            <div>
-              <h3 className="text-xl font-bold mb-3 uppercase">When:</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Saturday, April 26 and Sunday, April 27, 2025. The 6 tour homes open at 12 noon and close at 5 pm sharp both days.
-              </p>
-            </div>
+                {/* When */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 uppercase">When:</h2>
+                  <div className="flex gap-3">
+                    <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-foreground/90 leading-relaxed">
+                      Saturday, April 26 and Sunday, April 27, 2025. The 6 tour homes open at 12 noon and close at 5 pm sharp both days.
+                    </p>
+                  </div>
+                </div>
 
-            <div>
-              <h3 className="text-xl font-bold mb-3 uppercase">Where:</h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                White Rock Lake area in East Dallas
-              </p>
-              <Button variant="outline" className="border-2 border-foreground hover:bg-foreground hover:text-background">
-                <MapPin className="mr-2 h-4 w-4" />
-                CLICK FOR THE TOUR MAP
-              </Button>
-            </div>
+                {/* Where */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 uppercase">Where:</h2>
+                  <div className="flex gap-3 mb-4">
+                    <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-foreground/90 leading-relaxed">
+                      White Rock Lake area in East Dallas
+                    </p>
+                  </div>
+                  <Link href="/tour-map">
+                    <Button variant="outline" className="border-2 border-foreground hover:bg-foreground hover:text-background uppercase font-bold">
+                      Click for the tour map
+                    </Button>
+                  </Link>
+                </div>
 
-            <div>
-              <h3 className="text-xl font-bold mb-3 uppercase">Why:</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                100% proceeds benefit DISD's Hexter Elementary to bridge the budget gap and provide much-needed resources for students and teachers
-              </p>
+                {/* Why */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 uppercase">Why:</h2>
+                  <div className="flex gap-3">
+                    <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-foreground/90 leading-relaxed">
+                      100% proceeds benefit DISD's Hexter Elementary to bridge the budget gap and provide much-needed resources for students and teachers
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cost */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 uppercase">Cost:</h2>
+                  <div className="flex gap-3 mb-6">
+                    <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-foreground/90 leading-relaxed">
+                      Tickets are $35 per person (ages 13 and up). Children 12 and under are free.
+                    </p>
+                  </div>
+                  <Link href="/tickets">
+                    <Button size="lg" className="bg-foreground text-background hover:bg-foreground/90 uppercase font-bold">
+                      Click to buy your tickets now
+                    </Button>
+                  </Link>
+                  <p className="text-sm text-foreground/70 mt-6 leading-relaxed">
+                    You can also purchase tickets using your mobile device at each home during tour weekend for $35 each.{' '}
+                    <strong>We can not accept cash.</strong>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="max-w-3xl mx-auto">
-            <h3 className="text-xl font-bold mb-3 uppercase">Cost:</h3>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Tickets are $35 per person (ages 13 and up). Children 12 and under are free.
-            </p>
-            <Link href="/tickets">
-              <Button size="lg" className="bg-foreground text-background hover:bg-foreground/90">
-                CLICK TO BUY YOUR TICKETS NOW
-              </Button>
-            </Link>
-            <p className="text-sm text-muted-foreground mt-6">
-              You can also purchase tickets using your mobile device at each home during tour weekend for $35 each.{' '}
-              <strong>We can not accept cash.</strong>
-            </p>
+          {/* Right Side - Content Image */}
+          <div className="relative bg-muted">
+            {heroImage ? (
+              <Image
+                src="https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/wrth-details-hero-ftxV0yRz3Xh5u0wqHzgWxtaEYb3fsM"
+                alt="Tour Interior"
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-muted" />
+            )}
           </div>
         </div>
       </section>

@@ -29,8 +29,7 @@ export async function GET(request: NextRequest) {
       !domain ||
       domain === "" ||
       domain === "localhost" ||
-      domain === "127.0.0.1" ||
-      (domain.includes("vusercontent.net") && !domain.includes("vercel.app"))
+      domain === "127.0.0.1"
 
     if (isLocalhost) {
       console.log("[v0] Local/dev/empty domain detected - returning localhost event")
@@ -166,140 +165,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if this is the main platform domain (no event)
-    if (domain === "myschoolauction.com") {
-      console.log("[v0] Main domain detected - no event")
-      return NextResponse.json({ error: "Main domain - no event" }, { status: 404 })
-    }
+
 
     const isVusercontentPreview = host.includes(".vusercontent.net")
     const isVercelApp = host.includes(".vercel.app")
 
-    // If it's a preview domain, try to use the domain query param if available
+    // If it's a preview/Vercel domain with a domain query param, use that
     if ((isVusercontentPreview || isVercelApp) && searchParams.get("domain")) {
       domain = searchParams.get("domain") || domain
-      console.log("[v0] Preview domain detected, using query param domain:", domain)
+      console.log("[v0] Preview/Vercel domain detected, using query param domain:", domain)
     }
     
-    // For Vercel app domains without a domain param, try to find the most recent event
+    // For Vercel app domains, use the full vercel.app URL as the domain to match
     if (isVercelApp && !searchParams.get("domain")) {
-      console.log("[v0] Vercel app domain detected without domain param, finding most recent event")
-      const recentEventResult = await safeQuery(
-        async () =>
-          sql`
-        SELECT *
-        FROM events
-        ORDER BY created_at DESC
-        LIMIT 1
-      `,
-        [],
-      )
-      
-      if (recentEventResult.length > 0) {
-        const eventData = recentEventResult[0]
-        console.log("[v0] Most recent event found:", eventData.event_name, "id:", eventData.id)
-
-        // Fetch theme
-        let themeData = null
-        try {
-          const themeResult = await safeQuery(
-            async () =>
-              sql`
-            SELECT primary_color, secondary_color, logo_url
-            FROM themes
-            WHERE event_id = ${eventData.id}
-            LIMIT 1
-          `,
-            [],
-          )
-          if (themeResult.length > 0) {
-            themeData = themeResult[0]
-          }
-        } catch (error) {
-          console.log("[v0] Theme lookup failed")
-        }
-
-        // Fetch tickets
-        let ticketsData = []
-        try {
-          const ticketsResult = await safeQuery(
-            async () =>
-              sql`
-            SELECT id, name, description, price, quantity_available, quantity_sold, is_active
-            FROM event_tickets
-            WHERE event_id = ${eventData.id}
-            ORDER BY price ASC
-          `,
-            [],
-          )
-
-          const now = new Date()
-          ticketsData = await Promise.all(
-            ticketsResult.map(async (ticket: any) => {
-              try {
-                const tiers = await safeQuery(
-                  async () =>
-                    sql`
-                    SELECT id, tier_name, price, start_date, end_date, display_order
-                    FROM pricing_tiers
-                    WHERE ticket_id = ${ticket.id}
-                    ORDER BY display_order ASC, start_date ASC NULLS LAST
-                  `,
-                  [],
-                )
-
-                const tiersWithStatus = tiers.map((tier: any) => {
-                  const startDate = tier.start_date ? new Date(tier.start_date) : null
-                  const endDate = tier.end_date ? new Date(tier.end_date) : null
-                  const isAfterStart = !startDate || now >= startDate
-                  const isBeforeEnd = !endDate || now <= endDate
-                  const isActive = isAfterStart && isBeforeEnd
-
-                  return {
-                    id: tier.id,
-                    name: tier.tier_name,
-                    price: tier.price,
-                    startDate: tier.start_date,
-                    endDate: tier.end_date,
-                    displayOrder: tier.display_order,
-                    isActive,
-                  }
-                })
-
-                return {
-                  ...ticket,
-                  pricingTiers: tiersWithStatus,
-                }
-              } catch (error) {
-                return ticket
-              }
-            }),
-          )
-        } catch (error) {
-          console.log("[v0] Tickets lookup failed")
-        }
-
-        const event = {
-          ...eventData,
-          theme: themeData
-            ? {
-                primary_color: themeData.primary_color,
-                secondary_color: themeData.secondary_color,
-                logo_url: themeData.logo_url,
-              }
-            : null,
-          tickets: ticketsData,
-        }
-
-        console.log("[v0] Returning most recent event:", event.event_name)
-        return NextResponse.json({ event })
-      }
+      console.log("[v0] Using Vercel app domain for lookup:", domain)
+      // domain is already set to the normalized vercel.app subdomain
     }
 
     let eventResult = []
 
     const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
     console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
+
+    // Determine application based on domain
+    const isOurNeighborhoodTour = domain.includes('ourneighboorhoodtour.com')
+    const applicationName = isOurNeighborhoodTour ? 'hometour' : 'myschoolauction'
+    console.log("[v0] Domain-based application filter:", applicationName)
 
     console.log("[v0] Strategy 1: Trying exact match for:", domain)
     eventResult = await safeQuery(
@@ -314,16 +205,41 @@ export async function GET(request: NextRequest) {
           ''
         )
       ) = ${domain}
+      AND application_name = ${applicationName}
       LIMIT 1
     `,
       [],
     )
     console.log("[v0] Strategy 1 result count:", eventResult.length)
 
-    // Strategy 2: If it's a myschoolauction.com subdomain, try matching just the subdomain part
+    // Strategy 2: If it's a Vercel app domain, try matching against the full vercel.app URL
+    if (eventResult.length === 0 && domain.includes(".vercel.app")) {
+      console.log("[v0] Strategy 2: Trying Vercel app domain match for:", domain)
+      
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+            '^www\\.',
+            ''
+          )
+        ) = ${domain}
+        AND application_name = ${applicationName}
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 2 result count:", eventResult.length)
+    }
+
+    // Strategy 3: If it's a myschoolauction.com subdomain, try matching just the subdomain part
     if (eventResult.length === 0 && domain.includes(".myschoolauction.com")) {
       const subdomain = domain.split(".myschoolauction.com")[0]
-      console.log("[v0] Strategy 2: Trying subdomain match for:", subdomain)
+      console.log("[v0] Strategy 3: Trying subdomain match for:", subdomain)
 
       // Try matching against domains that are just the subdomain
       eventResult = await safeQuery(
@@ -338,15 +254,16 @@ export async function GET(request: NextRequest) {
             ''
           )
         ) = ${subdomain}
+        AND application_name = ${applicationName}
         LIMIT 1
       `,
         [],
       )
-      console.log("[v0] Strategy 2a result count:", eventResult.length)
+      console.log("[v0] Strategy 3a result count:", eventResult.length)
 
       // Also try matching against full subdomain URLs
       if (eventResult.length === 0) {
-        console.log("[v0] Strategy 2b: Trying full subdomain URL match")
+        console.log("[v0] Strategy 3b: Trying full subdomain URL match")
         eventResult = await safeQuery(
           async () =>
             sql`
@@ -359,17 +276,18 @@ export async function GET(request: NextRequest) {
               ''
             )
           ) LIKE ${subdomain + "%"}
+          AND application_name = ${applicationName}
           LIMIT 1
         `,
           [],
         )
-        console.log("[v0] Strategy 2b result count:", eventResult.length)
+        console.log("[v0] Strategy 3b result count:", eventResult.length)
       }
     }
 
-    // Strategy 3: For custom domains, try partial match
-    if (eventResult.length === 0 && !domain.includes("myschoolauction.com")) {
-      console.log("[v0] Strategy 3: Trying custom domain partial match")
+    // Strategy 4: For custom domains, try partial match
+    if (eventResult.length === 0 && !domain.includes("myschoolauction.com") && !domain.includes(".vercel.app")) {
+      console.log("[v0] Strategy 4: Trying custom domain partial match")
       const domainParts = domain.split(".")
       const baseDomain = domainParts.slice(-2).join(".")
 
@@ -385,22 +303,7 @@ export async function GET(request: NextRequest) {
             ''
           )
         ) LIKE ${"%" + baseDomain + "%"}
-        LIMIT 1
-      `,
-        [],
-      )
-      console.log("[v0] Strategy 3 result count:", eventResult.length)
-    }
-
-    if (eventResult.length === 0 && isVusercontentPreview) {
-      console.log("[v0] Strategy 4: Preview domain fallback - finding most recent non-localhost event")
-      eventResult = await safeQuery(
-        async () =>
-          sql`
-        SELECT *
-        FROM events
-        WHERE LOWER(domain) != 'localhost'
-        ORDER BY created_at DESC
+        AND application_name = ${applicationName}
         LIMIT 1
       `,
         [],
@@ -408,9 +311,26 @@ export async function GET(request: NextRequest) {
       console.log("[v0] Strategy 4 result count:", eventResult.length)
     }
 
+    if (eventResult.length === 0 && isVusercontentPreview) {
+      console.log("[v0] Strategy 5: Preview domain fallback - finding most recent non-localhost event")
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(domain) != 'localhost'
+        AND application_name = ${applicationName}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 5 result count:", eventResult.length)
+    }
+
     if (eventResult.length === 0) {
       console.log("[v0] No event found for domain:", domain)
-      console.log("[v0] Tried strategies: exact match, subdomain match, custom domain match, preview fallback")
+      console.log("[v0] Tried strategies: exact match, vercel domain match, subdomain match, custom domain match, preview fallback")
       return NextResponse.json({ error: "Event not found" }, { status: 404 })
     }
 

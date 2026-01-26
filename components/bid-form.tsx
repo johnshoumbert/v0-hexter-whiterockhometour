@@ -22,6 +22,7 @@ interface BidFormProps {
   onBidPlaced?: () => void
   hasEnded?: boolean // Added hasEnded prop to accept from parent
   event?: any // Added event prop to check invoice_enabled setting
+  onLoginRequired?: () => void // Callback when login is required
 }
 
 export function BidForm({
@@ -32,6 +33,7 @@ export function BidForm({
   onBidPlaced,
   hasEnded: hasEndedProp,
   event, // Accept event prop
+  onLoginRequired, // Accept onLoginRequired callback
 }: BidFormProps) {
   const { user } = useAuth()
   const router = useRouter()
@@ -98,8 +100,12 @@ export function BidForm({
     setError("")
 
     if (!user) {
-      toast.error("Please log in to place a bid")
-      router.push("/login")
+      if (onLoginRequired) {
+        onLoginRequired()
+      } else {
+        toast.error("Please log in to place a bid")
+        router.push("/login")
+      }
       return
     }
 
@@ -138,8 +144,12 @@ export function BidForm({
     setError("")
 
     if (!user) {
-      toast.error("Please log in to set a max bid")
-      router.push("/login")
+      if (onLoginRequired) {
+        onLoginRequired()
+      } else {
+        toast.error("Please log in to set a max bid")
+        router.push("/login")
+      }
       return
     }
 
@@ -290,7 +300,7 @@ export function BidForm({
 
   if (!user) {
     return (
-      <Button onClick={() => router.push("/login")} className="w-full">
+      <Button onClick={() => onLoginRequired ? onLoginRequired() : router.push("/login")} className="w-full">
         <Gavel className="mr-2 h-4 w-4" />
         Log In to Bid
       </Button>

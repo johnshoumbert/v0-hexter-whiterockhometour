@@ -20,10 +20,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useEvent } from "@/contexts/event-context"
 import { useAuth } from "@/contexts/auth-context"
-import { Footer } from "@/components/footer"
 import { LoginModal } from "@/components/login-modal"
 import Image from "next/image"
-import { useCartStore } from "@/stores/cart-store"
+import { useCartStore, type ShopItem } from "@/stores/cart-store"
+import { ProductOptionsModal } from "@/components/product-options-modal"
 
 interface TicketType {
   id: string
@@ -41,7 +41,7 @@ export default function TicketsPage() {
   const { toast } = useToast()
   const { event, isLoading: eventLoading } = useEvent()
   const { user } = useAuth()
-  const { addTicketToCart, setCartOpen } = useCartStore()
+  const { addTicketToCart, setCartOpen, addToCart } = useCartStore()
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [showWizard, setShowWizard] = useState(false)
@@ -51,6 +51,8 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketType[]>([])
   const [featuredShopItems, setFeaturedShopItems] = useState<any[]>([])
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [optionsModalOpen, setOptionsModalOpen] = useState(false)
+  const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null)
 
   useEffect(() => {
     if (event) {
@@ -60,7 +62,28 @@ export default function TicketsPage() {
         console.log("[v0] First ticket pricing tiers:", event.tickets[0].pricingTiers || event.tickets[0].pricing_tiers)
       }
       setTickets(event.tickets || [])
-      setFeaturedShopItems(event.featured_shop_items || [])
+      
+      // Fetch shop items separately
+      const fetchShopItems = async () => {
+        try {
+          console.log("[v0] Fetching shop items for event:", event.id)
+          const response = await fetch(`/api/events/${event.id}/shop/items?active=true`)
+          if (response.ok) {
+            const data = await response.json()
+            console.log("[v0] Shop items fetched:", data.items?.length || 0)
+            // Filter for featured items only
+            const featured = (data.items || []).filter((item: any) => item.featured)
+            console.log("[v0] Featured shop items:", featured.length)
+            setFeaturedShopItems(featured)
+          }
+        } catch (error) {
+          console.error("[v0] Error fetching shop items:", error)
+        }
+      }
+      
+      if (event.enable_shop) {
+        fetchShopItems()
+      }
     }
   }, [event])
 
@@ -234,6 +257,38 @@ export default function TicketsPage() {
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId)
   const selectedTicketActivePrice = selectedTicket ? getActivePrice(selectedTicket) : 0
 
+  const handleShopItemAddToCart = (item: ShopItem) => {
+    if (!user) {
+      setLoginModalOpen(true)
+      return
+    }
+
+    // Check if item has options
+    if (item.options && item.options.length > 0) {
+      setSelectedShopItem(item)
+      setOptionsModalOpen(true)
+    } else {
+      // No options, add directly to cart
+      addToCart(item, 1)
+      toast({
+        title: "Added to cart",
+        description: `${item.title} added to cart`,
+      })
+      setCartOpen(true)
+    }
+  }
+
+  const handleAddToCartWithOptions = (selectedOptions: Record<string, string | string[]>, quantity: number) => {
+    if (!selectedShopItem) return
+
+    addToCart(selectedShopItem, quantity, selectedOptions)
+    toast({
+      title: "Added to cart",
+      description: `${selectedShopItem.title} (x${quantity}) added to cart`,
+    })
+    setCartOpen(true)
+  }
+
   return (
     <>
       <div className="min-h-screen">
@@ -247,9 +302,13 @@ export default function TicketsPage() {
             </Button>
             <div className="flex items-center gap-3 mb-2">
               <Ticket className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl md:text-4xl font-bold">{event.event_name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold">Purchase Tickets & Items</h1>
             </div>
-            <p className="text-muted-foreground text-lg">Select your ticket type and quantity</p>
+            <p className="text-muted-foreground text-lg">Select your ticket type, quantity, and any items you'd like to purchase</p>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-6">Event Tickets</h2>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -361,18 +420,14 @@ export default function TicketsPage() {
         {event?.enable_shop && featuredShopItems.length > 0 && (
           <section className="py-16 md:py-24 border-t bg-muted/30">
             <div className="container mx-auto px-4">
-              <div className="mb-12 text-center">
-                <h2 className="text-balance text-3xl font-bold tracking-tight md:text-4xl">
-                  Don't Forget to Get These Items!
-                </h2>
-                <p className="mt-4 text-pretty text-lg text-muted-foreground mx-auto max-w-2xl">
-                  Complete your event experience with these featured items
-                </p>
+              <div className="mb-12">
+                <h2 className="text-3xl font-bold tracking-tight mb-2">Shop Items</h2>
+                <p className="text-lg text-muted-foreground">Complete your event experience with these items</p>
               </div>
               <div className="mx-auto max-w-6xl">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {featuredShopItems.map((item: any) => (
-                    <Card key={item.id} className="overflow-hidden">
+                    <Card key={item.id} className="overflow-hidden flex flex-col">
                       {item.image_url && (
                         <div className="relative w-full h-48 bg-muted">
                           <Image
@@ -389,7 +444,7 @@ export default function TicketsPage() {
                           <CardDescription className="line-clamp-2">{item.description}</CardDescription>
                         )}
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="flex-1 space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-bold">${Number(item.price).toFixed(2)}</span>
                           {item.quantity_type === "limited" && (
@@ -399,28 +454,24 @@ export default function TicketsPage() {
                           )}
                           {item.quantity_type === "preorder" && <Badge variant="secondary">Pre-order</Badge>}
                         </div>
-                        <Button className="w-full" asChild>
-                          <Link href="/shop">
-                            <ShoppingBag className="mr-2 h-4 w-4" />
-                            Shop Now
-                          </Link>
-                        </Button>
                       </CardContent>
+                      <CardFooter>
+                        <Button 
+                          className="w-full"
+                          onClick={() => handleShopItemAddToCart(item as ShopItem)}
+                        >
+                          <ShoppingBag className="mr-2 h-4 w-4" />
+                          Add to Cart
+                        </Button>
+                      </CardFooter>
                     </Card>
                   ))}
-                </div>
-                <div className="mt-8 text-center">
-                  <Button size="lg" asChild variant="outline">
-                    <Link href="/shop">View All Items</Link>
-                  </Button>
                 </div>
               </div>
             </div>
           </section>
         )}
       </div>
-
-      <Footer />
 
       <Dialog open={showQuantityDialog} onOpenChange={setShowQuantityDialog}>
         <DialogContent>
@@ -481,6 +532,16 @@ export default function TicketsPage() {
             setShowQuantityDialog(true)
           }
         }}
+      />
+
+      <ProductOptionsModal
+        item={selectedShopItem}
+        open={optionsModalOpen}
+        onClose={() => {
+          setOptionsModalOpen(false)
+          setSelectedShopItem(null)
+        }}
+        onAddToCart={handleAddToCartWithOptions}
       />
     </>
   )
