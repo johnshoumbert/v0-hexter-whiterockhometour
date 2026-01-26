@@ -143,7 +143,7 @@ export default function TourDetailsPage() {
           <div className="relative bg-muted">
             {heroImage ? (
               <Image
-                src="https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/wrth-details-hero-ftxV0yRz3Xh5u0wqHzgWxtaEYb3fsM"
+                src="/images/design-mode/wrth-details-hero.jpg"
                 alt="Tour Interior"
                 fill
                 className="object-cover"
