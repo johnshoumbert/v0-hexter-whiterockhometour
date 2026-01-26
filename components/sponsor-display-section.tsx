@@ -44,26 +44,26 @@ export function SponsorDisplaySection() {
         const sponsorsRes = await fetch(`/api/events/${event.id}/sponsors?showOnHome=true`)
         const sponsorsData = await sponsorsRes.json()
 
-        console.log("[v0] Loaded sponsor levels:", levelsData.levels)
-        console.log("[v0] Loaded home sponsors:", sponsorsData.sponsors)
+        const levels = levelsData?.levels || []
+        const sponsorsList = sponsorsData?.sponsors || []
 
         // Check if we should group by levels (if there are levels defined)
-        const hasLevels = levelsData.levels && levelsData.levels.length > 0
+        const hasLevels = levels.length > 0
         setGroupByLevel(hasLevels)
 
         if (hasLevels) {
           // Group sponsors by level
-          const levelsWithSponsors = levelsData.levels.map((level: any) => ({
+          const levelsWithSponsors = levels.map((level: any) => ({
             ...level,
-            sponsors: sponsorsData.sponsors.filter((s: Sponsor) => s.level === level.level && s.show_on_home),
+            sponsors: sponsorsList.filter((s: Sponsor) => s.level === level.level && s.show_on_home),
           }))
           setSponsorLevels(levelsWithSponsors)
         } else {
           // No levels, just show all sponsors
-          setSponsors(sponsorsData.sponsors.filter((s: Sponsor) => s.show_on_home))
+          setSponsors(sponsorsList.filter((s: Sponsor) => s.show_on_home))
         }
       } catch (error) {
-        console.error("[v0] Error fetching sponsors:", error)
+        // Silently handle errors - sponsors section will just not display
       } finally {
         setIsLoading(false)
       }
