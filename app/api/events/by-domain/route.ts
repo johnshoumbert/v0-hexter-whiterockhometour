@@ -185,120 +185,56 @@ export async function GET(request: NextRequest) {
 
     let eventResult = []
 
-    const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
-    console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
+    // Prepare subdomain for ourneighborhoodtour.com domains
+    let subdomain = ""
+    if (domain.includes(".ourneighborhoodtour.com")) {
+      subdomain = domain.split(".ourneighborhoodtour.com")[0]
+    }
 
-    console.log("[v0] Strategy 1: Trying exact match for:", domain)
+    // Use a single optimized query with OR conditions instead of multiple sequential queries
+    console.log("[v0] Trying unified domain match for:", domain)
     eventResult = await safeQuery(
-      async () =>
-        sql`
-      SELECT *
-      FROM events
-      WHERE LOWER(
-        REGEXP_REPLACE(
-          REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-          '^www\\.',
-          ''
-        )
-      ) = ${domain}
-      AND application_name = 'hometour'
-      LIMIT 1
-    `,
-      [],
-    )
-    console.log("[v0] Strategy 1 result count:", eventResult.length)
+      async () => {
+        // For ourneighborhoodtour.com subdomains
+        if (subdomain) {
+          return sql`
+            SELECT *
+            FROM events
+            WHERE application_name = 'hometour'
+            AND (
+              LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(domain), '^https?://', ''), '^www\\.', '')) = ${domain}
+              OR LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(domain), '^https?://', ''), '^www\\.', '')) = ${subdomain}
+              OR LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(domain), '^https?://', ''), '^www\\.', '')) LIKE ${subdomain + "%"}
+            )
+            LIMIT 1
+          `
+        }
+        
+        // For custom domains or preview fallback
+        const domainParts = domain.split(".")
+        const baseDomain = domainParts.length >= 2 ? domainParts.slice(-2).join(".") : domain
 
-    // Strategy 2: If it's an ourneighborhoodtour.com subdomain, try matching just the subdomain part
-    if (eventResult.length === 0 && domain.includes(".ourneighborhoodtour.com")) {
-      const subdomain = domain.split(".ourneighborhoodtour.com")[0]
-      console.log("[v0] Strategy 2: Trying subdomain match for:", subdomain)
-
-      // Try matching against domains that are just the subdomain
-      eventResult = await safeQuery(
-        async () =>
-          sql`
-        SELECT *
-        FROM events
-        WHERE LOWER(
-          REGEXP_REPLACE(
-            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-            '^www\\.',
-            ''
-          )
-        ) = ${subdomain}
-        AND application_name = 'hometour'
-        LIMIT 1
-      `,
-        [],
-      )
-      console.log("[v0] Strategy 2a result count:", eventResult.length)
-
-      // Also try matching against full subdomain URLs
-      if (eventResult.length === 0) {
-        console.log("[v0] Strategy 2b: Trying full subdomain URL match")
-        eventResult = await safeQuery(
-          async () =>
-            sql`
+        return sql`
           SELECT *
           FROM events
-          WHERE LOWER(
-            REGEXP_REPLACE(
-              REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-              '^www\\.',
-              ''
-            )
-          ) LIKE ${subdomain + "%"}
-          AND application_name = 'hometour'
-          LIMIT 1
-        `,
-          [],
-        )
-        console.log("[v0] Strategy 2b result count:", eventResult.length)
-      }
-    }
-
-    // Strategy 3: For custom domains, try partial match
-    if (eventResult.length === 0 && !domain.includes("ourneighborhoodtour.com")) {
-      console.log("[v0] Strategy 3: Trying custom domain partial match")
-      const domainParts = domain.split(".")
-      const baseDomain = domainParts.slice(-2).join(".")
-
-      eventResult = await safeQuery(
-        async () =>
-          sql`
-        SELECT *
-        FROM events
-        WHERE LOWER(
-          REGEXP_REPLACE(
-            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-            '^www\\.',
-            ''
+          WHERE application_name = 'hometour'
+          AND (
+            LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(domain), '^https?://', ''), '^www\\.', '')) = ${domain}
+            ${
+              isVusercontentPreview
+                ? sql`OR LOWER(domain) != 'localhost'`
+                : sql`OR LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(domain), '^https?://', ''), '^www\\.', '')) LIKE ${"%" + baseDomain + "%"}`
+            }
           )
-        ) LIKE ${"%" + baseDomain + "%"}
-        AND application_name = 'hometour'
-        LIMIT 1
-      `,
-        [],
-      )
-      console.log("[v0] Strategy 3 result count:", eventResult.length)
-    }
-
-    if (eventResult.length === 0 && isVusercontentPreview) {
-      console.log("[v0] Strategy 4: Preview domain fallback - finding most recent non-localhost event")
-      eventResult = await safeQuery(
-        async () =>
-          sql`
-        SELECT *
-        FROM events
-        WHERE LOWER(domain) != 'localhost'
-        AND application_name = 'hometour'
-        ORDER BY created_at DESC
-        LIMIT 1
-      `,
-        [],
-      )
-      console.log("[v0] Strategy 4 result count:", eventResult.length)
-    }
+          ORDER BY 
+            CASE WHEN LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(domain), '^https?://', ''), '^www\\.', '')) = ${domain} THEN 0 ELSE 1 END,
+            created_at DESC
+          LIMIT 1
+        `
+      },
+      [],
+    )
+    console.log("[v0] Unified query result count:", eventResult.length)
 
     if (eventResult.length === 0) {
       console.log("[v0] No event found for domain:", domain)
