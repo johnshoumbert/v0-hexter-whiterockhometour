@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
     // Production domain mappings (hardcoded until DB is updated)
     const productionDomainMap: Record<string, string> = {
       "whiterock-2025.ourneighborhoodtour.com": "d42fcc36-3f53-4a65-982c-373776747c44",
+      "whiterock-2026.ourneighborhoodtour.com": "06729964-bd81-4085-8195-e86e0350f85a",
     }
 
     /**
