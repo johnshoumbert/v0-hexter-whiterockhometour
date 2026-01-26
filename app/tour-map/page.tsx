@@ -48,21 +48,34 @@ export default function TourMapPage() {
   // Fetch homes
   useEffect(() => {
     const fetchHomes = async () => {
-      if (!event?.id) return
+      if (!event?.id) {
+        console.log("[v0] No event ID, skipping homes fetch")
+        return
+      }
 
       try {
+        console.log("[v0] Fetching homes for event:", event.id)
         setLoading(true)
         const response = await fetch(`/api/events/${event.id}/homes`)
+        console.log("[v0] Homes API response status:", response.status)
+        
         if (response.ok) {
           const data = await response.json()
-          const sortedHomes = (data.homes || []).sort(
+          console.log("[v0] Homes API response data:", data)
+          console.log("[v0] Number of homes received:", Array.isArray(data) ? data.length : 0)
+          
+          // The API returns the homes array directly, not wrapped in an object
+          const sortedHomes = (Array.isArray(data) ? data : []).sort(
             (a: Home, b: Home) => a.display_order - b.display_order
           )
+          console.log("[v0] Sorted homes:", sortedHomes)
           setHomes(sortedHomes)
           setGoogleMapsUrl(buildGoogleMapsUrl(sortedHomes))
+        } else {
+          console.log("[v0] Homes API error:", await response.text())
         }
       } catch (error) {
-        console.error("Error fetching homes:", error)
+        console.error("[v0] Error fetching homes:", error)
         toast({
           title: "Error",
           description: "Failed to load tour homes",
