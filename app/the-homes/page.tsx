@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useEvent } from "@/contexts/event-context"
 import { useAuth } from "@/contexts/auth-context"
 import Image from "next/image"
@@ -34,6 +35,7 @@ interface Home {
 }
 
 export default function TheHomesPage() {
+  const router = useRouter()
   const { event } = useEvent()
   const { user, isEventAdmin } = useAuth()
   const { toast } = useToast()
@@ -193,6 +195,7 @@ export default function TheHomesPage() {
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold uppercase mb-8">THE 2025 HOMES</h2>
           <Button
+            onClick={() => router.push("/tour-map")}
             variant="outline"
             size="lg"
             className="border-2 border-foreground hover:bg-foreground hover:text-background uppercase tracking-wider px-8"
