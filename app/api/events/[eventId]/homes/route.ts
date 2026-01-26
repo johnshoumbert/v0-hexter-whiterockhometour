@@ -5,7 +5,7 @@ import { checkAdminAccess } from "@/lib/admin-check"
 
 export async function GET(request: Request, { params }: { params: { eventId: string } }) {
   try {
-    const { eventId } = params
+    const { eventId } = await params
 
     const homes = await sql`
       SELECT *
