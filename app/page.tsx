@@ -172,7 +172,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Countdown Banner */}
-      <div className="bg-black text-white px-4 text-center text-sm tracking-wider mt-16 md:mt-0 py-2>
+      <div className="bg-black text-white px-4 text-center text-sm tracking-wider mt-16 md:mt-0 py-2">
         THANK YOU FOR A GREAT 17TH YEAR, DALLAS!
       </div>
 
