@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: { eventId: string; id: string } }
 ) {
   try {
-    const { eventId, id } = params
+    const { eventId, id } = await params
 
     const result = await sql`
       SELECT *
@@ -32,7 +32,7 @@ export async function PUT(
   { params }: { params: { eventId: string; id: string } }
 ) {
   try {
-    const { eventId, id } = params
+    const { eventId, id } = await params
     const user = await getSession()
 
     if (!user) {
@@ -111,7 +111,7 @@ export async function PATCH(
   { params }: { params: { eventId: string; id: string } }
 ) {
   try {
-    const { eventId, id } = params
+    const { eventId, id } = await params
     const user = await getSession()
 
     if (!user) {
@@ -190,7 +190,7 @@ export async function DELETE(
   { params }: { params: { eventId: string; id: string } }
 ) {
   try {
-    const { eventId, id } = params
+    const { eventId, id } = await params
     const user = await getSession()
 
     if (!user) {
