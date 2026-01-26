@@ -205,7 +205,7 @@ export function Navbar() {
       ]
 
   const logoUrl = event?.logo_image_url
-  const eventName = event?.event_name || "MySchoolAuction"
+  const eventName = event?.event_name || "Our Neighborhood Tour"
 
   if (isKioskMode) {
     return null

@@ -199,6 +199,111 @@ export async function GET(request: NextRequest) {
       console.log("[v0] Explicit mapping result count:", eventResult.length)
     }
 
+    // If we found the event via explicit mapping, process it and return
+    if (eventResult.length > 0 && domain === 'whiterock.ourneighborhoodtour.com') {
+      const eventData = eventResult[0]
+      console.log("[v0] Processing explicitly mapped event:", eventData.event_name)
+
+      // Try to fetch theme separately
+      let themeData = null
+      try {
+        const themeResult = await safeQuery(
+          async () =>
+            sql`
+          SELECT primary_color, secondary_color, logo_url
+          FROM themes
+          WHERE event_id = ${eventData.id}
+          LIMIT 1
+        `,
+          [],
+        )
+        if (themeResult.length > 0) {
+          themeData = themeResult[0]
+        }
+      } catch (error) {
+        console.log("[v0] Theme lookup failed for explicit mapping, using fallback")
+      }
+
+      let ticketsData = []
+      try {
+        const ticketsResult = await safeQuery(
+          async () =>
+            sql`
+          SELECT id, name, description, price, quantity_available, quantity_sold, is_active
+          FROM event_tickets
+          WHERE event_id = ${eventData.id}
+          ORDER BY price ASC
+        `,
+          [],
+        )
+
+        console.log("[v0] Tickets query result count for explicit mapping:", ticketsResult.length)
+
+        // Fetch pricing tiers for each ticket
+        const now = new Date()
+        ticketsData = await Promise.all(
+          ticketsResult.map(async (ticket: any) => {
+            try {
+              const tiers = await safeQuery(
+                async () =>
+                  sql`
+                  SELECT id, tier_name, price, start_date, end_date, display_order
+                  FROM pricing_tiers
+                  WHERE ticket_id = ${ticket.id}
+                  ORDER BY display_order ASC, start_date ASC NULLS LAST
+                `,
+                [],
+              )
+
+              const tiersWithStatus = tiers.map((tier: any) => {
+                const startDate = tier.start_date ? new Date(tier.start_date) : null
+                const endDate = tier.end_date ? new Date(tier.end_date) : null
+
+                const isAfterStart = !startDate || now >= startDate
+                const isBeforeEnd = !endDate || now <= endDate
+                const isActive = isAfterStart && isBeforeEnd
+
+                return {
+                  id: tier.id,
+                  name: tier.tier_name,
+                  price: tier.price,
+                  startDate: tier.start_date,
+                  endDate: tier.end_date,
+                  displayOrder: tier.display_order,
+                  isActive,
+                }
+              })
+
+              return {
+                ...ticket,
+                pricingTiers: tiersWithStatus,
+              }
+            } catch (error) {
+              console.log("[v0] Error fetching pricing tiers for ticket:", ticket.id)
+              return ticket
+            }
+          }),
+        )
+      } catch (error) {
+        console.log("[v0] Tickets lookup failed for explicit mapping")
+      }
+
+      const event = {
+        ...eventData,
+        theme: themeData
+          ? {
+              primary_color: themeData.primary_color,
+              secondary_color: themeData.secondary_color,
+              logo_url: themeData.logo_url,
+            }
+          : null,
+        tickets: ticketsData,
+      }
+
+      console.log("[v0] Returning explicitly mapped event:", event.event_name)
+      return NextResponse.json({ event })
+    }
+
     // Determine application based on domain
     const isOurNeighborhoodTour = domain.includes('ourneighborhoodtour.com')
     const applicationName = isOurNeighborhoodTour ? 'hometour' : 'myschoolauction'
