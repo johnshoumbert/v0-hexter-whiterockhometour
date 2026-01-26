@@ -188,9 +188,10 @@ export async function GET(request: NextRequest) {
     const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
     console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
 
-    // Explicit domain mapping for whiterock.ourneighborhoodtour.com
-    if (domain === 'whiterock.ourneighborhoodtour.com') {
-      console.log("[v0] Explicit domain mapping: whiterock.ourneighborhoodtour.com -> d42fcc36-3f53-4a65-982c-373776747c44")
+    // Explicit domain mapping for whiterock.ourneighborhoodtour.com and whiterock-2025.ourneighborhoodtour.com
+    const isWhiteRockDomain = domain === 'whiterock.ourneighborhoodtour.com' || domain === 'whiterock-2025.ourneighborhoodtour.com'
+    if (isWhiteRockDomain) {
+      console.log(`[v0] Explicit domain mapping: ${domain} -> d42fcc36-3f53-4a65-982c-373776747c44`)
       const whiteRockEventId = 'd42fcc36-3f53-4a65-982c-373776747c44'
       eventResult = await safeQuery(
         async () => sql`SELECT * FROM events WHERE id = ${whiteRockEventId} LIMIT 1`,
@@ -200,7 +201,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If we found the event via explicit mapping, process it and return
-    if (eventResult.length > 0 && domain === 'whiterock.ourneighborhoodtour.com') {
+    if (eventResult.length > 0 && isWhiteRockDomain) {
       const eventData = eventResult[0]
       console.log("[v0] Processing explicitly mapped event:", eventData.event_name)
 
