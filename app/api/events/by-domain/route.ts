@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const isPreview = domain.includes("vusercontent.net")
     const isLocalhost =
       domain === "localhost" ||
-      domain === "127.0.0.1"
+      domain === "127.0.0.1" || domain.includes("vusercontent.net")
 
     /* ---------------------------------------------
      * Localhost handling
