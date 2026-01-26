@@ -4,9 +4,12 @@ import { sql } from "@/lib/db"
 
 export async function GET(request: Request, { params }: { params: { homeId: string } }) {
   try {
+        const { homeId } = await params
+
+    
     const result = await sql`
       SELECT * FROM homes
-      WHERE id = ${params.homeId}
+      WHERE id = ${homeId}
     `
 
     if (result.length === 0) {
