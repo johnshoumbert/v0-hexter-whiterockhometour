@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: { eventId: str
 
 export async function POST(request: Request, { params }: { params: { eventId: string } }) {
   try {
-    const { eventId } = params
+    const { eventId } = await params
     const user = await getSession()
 
     if (!user) {
