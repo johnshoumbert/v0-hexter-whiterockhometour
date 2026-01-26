@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
             '^www\\.',
             ''
           )
-        ) = 'localhost'
+        ) = 'localhost' and application_name='hometour'
         LIMIT 1
       `,
         [],
