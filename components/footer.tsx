@@ -29,7 +29,7 @@ export function Footer() {
           <div className="flex justify-center">
             <div className="relative w-48 h-48">
               <Image
-                src="https://wrhometour.com/wp-content/uploads/2022/11/Hexter-Logo-Color.png"
+                src="https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/whiterockhometour/HexterPTSA.png"
                 alt="Hexter Elementary Logo"
                 fill
                 className="object-contain"
