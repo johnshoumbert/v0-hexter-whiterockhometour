@@ -2,70 +2,94 @@ import { NextResponse } from "next/server"
 import { getSession, isEventAdmin } from "@/lib/auth"
 import { headers } from "next/headers"
 import { sql } from "@/lib/db"
+import { normalizeDomain } from "@/lib/normalize-domain"
+
+function invariant(condition: any, message: string): asserts condition {
+  if (!condition) throw new Error(message)
+}
 
 export async function GET(request: Request) {
   try {
+    /* ----------------------------------------
+     * Resolve user session (must not hang)
+     * ---------------------------------------- */
     const user = await getSession()
 
     if (!user) {
-      return NextResponse.json({ user: null, error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ user: null }, { status: 200 })
     }
 
+    /* ----------------------------------------
+     * Resolve eventId
+     * ---------------------------------------- */
     const { searchParams } = new URL(request.url)
     let eventId: string | null = searchParams.get("eventId")
 
     if (!eventId) {
-      const headersList = await headers()
-      const host = headersList.get("host") || ""
+      const headersList = headers()
+      const host = headersList.get("host")
 
-      try {
-        const eventResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || `http://${host}`}/api/events/by-domain`,
-          {
-            headers: { host },
-          },
-        )
+      if (host) {
+        const domain = normalizeDomain(host)
 
-        // Only try to parse JSON if response is ok
-        if (eventResponse.ok) {
-          const contentType = eventResponse.headers.get("content-type")
-          if (contentType && contentType.includes("application/json")) {
-            const eventData = await eventResponse.json()
-            eventId = eventData.event?.id
-          }
+        const eventRows = await sql`
+          SELECT id
+          FROM events
+          WHERE application_name = 'hometour'
+            AND LOWER(
+              REGEXP_REPLACE(
+                REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+                '^www\\.',
+                ''
+              )
+            ) = ${domain}
+          LIMIT 1
+        `
+
+        if (eventRows.length > 0) {
+          eventId = eventRows[0].id
         }
-      } catch (error) {
-        // Silently fail - this is expected when on main domain or when event doesn't exist
       }
     }
 
-    // Check event-specific admin status
-    const userIsEventAdmin = eventId ? await isEventAdmin(user.id, eventId) : false
+    /* ----------------------------------------
+     * Event admin + role checks
+     * ---------------------------------------- */
+    const userIsEventAdmin =
+      eventId ? await isEventAdmin(user.id, eventId) : false
 
     let eventRole: string | undefined
+
     if (eventId) {
-      try {
-        const eventUserResult = await sql`
-          SELECT role FROM event_users 
-          WHERE user_id = ${user.id} AND event_id = ${eventId}
-        `
-        if (eventUserResult.length > 0) {
-          eventRole = eventUserResult[0].role
-        }
-      } catch (error) {
-        console.error("[v0] Failed to fetch event role:", error)
+      const eventUserResult = await sql`
+        SELECT role
+        FROM event_users
+        WHERE user_id = ${user.id}
+          AND event_id = ${eventId}
+        LIMIT 1
+      `
+
+      if (eventUserResult.length > 0) {
+        eventRole = eventUserResult[0].role
       }
     }
 
+    /* ----------------------------------------
+     * Return response (always)
+     * ---------------------------------------- */
     return NextResponse.json({
       user: {
         ...user,
-        isEventAdmin: userIsEventAdmin || user.is_admin, // Global admins are admins everywhere
+        isEventAdmin: user.is_admin || userIsEventAdmin,
         eventRole,
       },
     })
   } catch (error) {
-    console.error("[v0] Get session error:", error)
-    return NextResponse.json({ error: "Failed to get session" }, { status: 500 })
+    console.error("[auth/me] Fatal error:", error)
+
+    return NextResponse.json(
+      { error: "Failed to get session" },
+      { status: 500 }
+    )
   }
 }
