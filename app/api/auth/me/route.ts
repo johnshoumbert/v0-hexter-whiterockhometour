@@ -11,6 +11,22 @@ function invariant(condition: any, message: string): asserts condition {
 export async function GET(request: Request) {
   try {
     /* ----------------------------------------
+     * Check database configuration first
+     * ---------------------------------------- */
+    const dbUrl = process.env.NEON_DATABASE_URL ||
+      process.env.NEON_POSTGRES_URL ||
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL
+
+    if (!dbUrl) {
+      console.error("[auth/me] No database URL configured")
+      return NextResponse.json(
+        { user: null, error: "Database not configured" },
+        { status: 200 }
+      )
+    }
+
+    /* ----------------------------------------
      * Resolve user session (must not hang)
      * ---------------------------------------- */
     const user = await getSession()

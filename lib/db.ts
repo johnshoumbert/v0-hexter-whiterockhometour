@@ -12,10 +12,18 @@ function getSQL() {
       process.env.POSTGRES_URL
 
     if (!databaseUrl) {
+      console.error("[v0][DB] Available env vars:", {
+        NEON_DATABASE_URL: process.env.NEON_DATABASE_URL ? "SET" : "NOT SET",
+        NEON_POSTGRES_URL: process.env.NEON_POSTGRES_URL ? "SET" : "NOT SET",
+        DATABASE_URL: process.env.DATABASE_URL ? "SET" : "NOT SET",
+        POSTGRES_URL: process.env.POSTGRES_URL ? "SET" : "NOT SET",
+      })
       throw new Error(
         "No Neon database URL environment variable is set. Tried: NEON_DATABASE_URL, NEON_POSTGRES_URL, DATABASE_URL, POSTGRES_URL",
       )
     }
+    
+    console.log("[v0][DB] Initializing database connection...")
     _sql = neon(databaseUrl)
   }
   return _sql

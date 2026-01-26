@@ -38,6 +38,22 @@ function invariant(condition: any, message: string): asserts condition {
 export async function GET(request: NextRequest) {
   try {
     /* ---------------------------------------------
+     * Check database configuration first
+     * --------------------------------------------- */
+    const dbUrl = process.env.NEON_DATABASE_URL ||
+      process.env.NEON_POSTGRES_URL ||
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL
+
+    if (!dbUrl) {
+      console.error("[v0] No database URL configured")
+      return NextResponse.json(
+        { error: "Database not configured", details: "Missing database connection string" },
+        { status: 503 }
+      )
+    }
+
+    /* ---------------------------------------------
      * Resolve host + domain
      * --------------------------------------------- */
     const { searchParams } = new URL(request.url)
@@ -53,6 +69,7 @@ export async function GET(request: NextRequest) {
     invariant(domain, "Normalized domain is empty")
 
     console.log("[v0] Incoming domain:", domain)
+    console.log("[v0] Database URL configured:", dbUrl ? "Yes" : "No")
 
     const isPreview = domain.includes("vusercontent.net")
     const isLocalhost =
