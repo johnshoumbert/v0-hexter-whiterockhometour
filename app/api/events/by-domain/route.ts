@@ -99,16 +99,37 @@ export async function GET(request: NextRequest) {
     // Check if this is a known production domain
     const mappedEventId = productionDomainMap[domain]
     if (mappedEventId) {
-      console.log("[by-domain] Production domain matched, using mapped event ID:", mappedEventId)
-      eventResult = await safeQuery(
-        async () => sql`
-          SELECT *
-          FROM events
-          WHERE id = ${mappedEventId}
-          LIMIT 1
-        `,
-        []
-      )
+      console.log("[v0] Production domain matched, using mapped event ID:", mappedEventId)
+      try {
+        eventResult = await safeQuery(
+          async () => sql`
+            SELECT *
+            FROM events
+            WHERE id = ${mappedEventId}
+            LIMIT 1
+          `,
+          []
+        )
+        console.log("[v0] Production event query result count:", eventResult.length)
+        if (eventResult.length > 0) {
+          console.log("[v0] Production event found:", eventResult[0].event_name)
+        } else {
+          console.log("[v0] No event found with ID:", mappedEventId)
+          // Try to find any event with this domain in the database
+          const domainCheck = await safeQuery(
+            async () => sql`
+              SELECT id, event_name, domain
+              FROM events
+              WHERE LOWER(domain) LIKE ${'%' + domain.split('.')[0] + '%'}
+              LIMIT 5
+            `,
+            []
+          )
+          console.log("[v0] Similar domain events:", JSON.stringify(domainCheck))
+        }
+      } catch (dbError) {
+        console.error("[v0] Database error fetching production event:", dbError)
+      }
     } else {
       // Standard domain lookup
       eventResult = await safeQuery(
@@ -129,10 +150,31 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log("[by-domain] Event query count:", eventResult.length)
+    console.log("[v0] Event query count:", eventResult.length)
+
+    // If production mapping didn't work, try direct domain lookup as fallback
+    if (!eventResult.length && mappedEventId) {
+      console.log("[v0] Hardcoded mapping failed, trying direct domain lookup")
+      eventResult = await safeQuery(
+        async () => sql`
+          SELECT *
+          FROM events
+          WHERE LOWER(
+            REGEXP_REPLACE(
+              REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+              '^www\\.',
+              ''
+            )
+          ) = ${domain}
+          LIMIT 1
+        `,
+        []
+      )
+      console.log("[v0] Direct domain lookup result count:", eventResult.length)
+    }
 
     if (!eventResult.length) {
-      console.warn("[by-domain] No event found for:", domain)
+      console.warn("[v0] No event found for:", domain)
       
       // For preview/development environments, fetch the localhost demo event
       if (domain.includes('vusercontent.net') || domain.includes('vercel.app')) {
