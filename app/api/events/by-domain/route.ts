@@ -88,34 +88,89 @@ export async function GET(request: NextRequest) {
     console.log("[v0] Database URL configured:", dbUrl ? "Yes" : "No")
 
     const isPreview = domain.includes("vusercontent.net")
+    const isVercelPreview = domain.includes(".vercel.app")
     const isLocalhost =
       domain === "localhost" ||
       domain === "127.0.0.1"
 
     /* ---------------------------------------------
-     * Localhost handling
+     * Localhost or Vercel preview handling
+     * Get the first available hometour event
      * --------------------------------------------- */
-    if (isLocalhost) {
+    if (isLocalhost || isVercelPreview) {
+      console.log("[v0] Development/Preview mode - fetching first hometour event")
+      
       const rows = await safeQuery(
         () =>
           sql`
             SELECT *
             FROM events
-            WHERE domain = 'localhost'
-              AND application_name = 'hometour'
+            WHERE application_name = 'hometour'
+            ORDER BY created_at DESC
             LIMIT 1
           `,
-        "localhost-event"
+        "dev-event"
       )
 
       if (!rows.length) {
+        console.log("[v0] No hometour events found in database")
         return NextResponse.json(
-          { error: "No localhost event configured" },
+          { error: "No events configured", details: "No hometour events found" },
           { status: 404 }
         )
       }
 
-      return NextResponse.json({ event: rows[0] })
+      console.log("[v0] Found event:", rows[0].event_name, "with id:", rows[0].id)
+      
+      // Continue to fetch theme and tickets for this event
+      const eventData = rows[0]
+      
+      /* Theme lookup */
+      let theme = null
+      try {
+        const themeRows = await safeQuery(
+          () =>
+            sql`
+              SELECT primary_color, secondary_color, logo_url
+              FROM themes
+              WHERE event_id = ${eventData.id}
+              LIMIT 1
+            `,
+          "theme-lookup"
+        )
+        if (themeRows.length) {
+          theme = themeRows[0]
+        }
+      } catch (error) {
+        console.warn("[v0] Theme lookup failed:", error)
+      }
+
+      /* Ticket lookup */
+      let tickets: any[] = []
+      try {
+        const ticketRows = await safeQuery(
+          () =>
+            sql`
+              SELECT id, name, description, price,
+                     quantity_available, quantity_sold, is_active
+              FROM event_tickets
+              WHERE event_id = ${eventData.id}
+              ORDER BY price ASC
+            `,
+          "tickets-lookup"
+        )
+        tickets = ticketRows
+      } catch (error) {
+        console.warn("[v0] Ticket lookup failed:", error)
+      }
+
+      return NextResponse.json({
+        event: {
+          ...eventData,
+          theme,
+          tickets,
+        },
+      })
     }
 
     /* ---------------------------------------------
@@ -140,6 +195,8 @@ export async function GET(request: NextRequest) {
     /* ---------------------------------------------
      * EVENT LOOKUP — exact match ONLY
      * --------------------------------------------- */
+    console.log("[v0] Looking up event for exact domain:", domain)
+    
     const eventRows = await safeQuery(
       () =>
         sql`

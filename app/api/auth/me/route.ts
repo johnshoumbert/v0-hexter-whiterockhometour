@@ -57,25 +57,43 @@ export async function GET(request: Request) {
 
       if (host) {
         const domain = normalizeDomain(host)
+        const isVercelPreview = domain.includes(".vercel.app")
+        const isLocalhost = domain === "localhost" || domain === "127.0.0.1"
+        
         console.log("[v0][auth/me] Looking up event for domain:", domain)
 
         try {
-          const eventRows = await sql`
-            SELECT id
-            FROM events
-            WHERE application_name = 'hometour'
-              AND LOWER(
-                REGEXP_REPLACE(
-                  REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-                  '^www\\.',
-                  ''
-                )
-              ) = ${domain}
-            LIMIT 1
-          `
+          let eventRows
+          
+          // For Vercel preview or localhost, get the first hometour event
+          if (isVercelPreview || isLocalhost) {
+            eventRows = await sql`
+              SELECT id
+              FROM events
+              WHERE application_name = 'hometour'
+              ORDER BY created_at DESC
+              LIMIT 1
+            `
+          } else {
+            // For production domains, do exact match
+            eventRows = await sql`
+              SELECT id
+              FROM events
+              WHERE application_name = 'hometour'
+                AND LOWER(
+                  REGEXP_REPLACE(
+                    REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+                    '^www\\.',
+                    ''
+                  )
+                ) = ${domain}
+              LIMIT 1
+            `
+          }
 
           if (eventRows.length > 0) {
             eventId = eventRows[0].id
+            console.log("[v0][auth/me] Found event id:", eventId)
           }
         } catch (eventError) {
           console.error("[v0][auth/me] Event lookup error:", eventError)
