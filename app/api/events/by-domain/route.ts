@@ -18,14 +18,20 @@ function normalizeDomain(input: string): string {
  */
 async function safeQuery<T = any>(
   queryFn: () => Promise<T>,
-  fallback: T
+  fallback: T,
+  label: string = "unknown"
 ): Promise<T> {
+  console.log(`[v0] [by-domain] Starting query: ${label}`)
+  const startTime = Date.now()
   try {
-    return await queryFn()
+    const result = await queryFn()
+    console.log(`[v0] [by-domain] Query completed: ${label} (${Date.now() - startTime}ms)`)
+    return result
   } catch (error: any) {
     const msg = error?.message || String(error)
+    console.error(`[v0] [by-domain] Query failed: ${label} - ${msg}`)
     if (msg.includes("Too Many Requests") || msg.includes("429")) {
-      console.warn("[by-domain] Rate limit hit, returning fallback")
+      console.warn("[v0] [by-domain] Rate limit hit, returning fallback")
       return fallback
     }
     throw error
@@ -62,7 +68,8 @@ export async function GET(request: NextRequest) {
           WHERE LOWER(domain) = 'localhost'
           LIMIT 1
         `,
-        []
+        [],
+        "localhost-event"
       )
 
       if (!localResult.length) {
@@ -99,7 +106,7 @@ export async function GET(request: NextRequest) {
     // Check if this is a known production domain
     const mappedEventId = productionDomainMap[domain]
     if (mappedEventId) {
-      console.log("[by-domain] Production domain matched, using mapped event ID:", mappedEventId)
+      console.log("[v0] [by-domain] Production domain matched, using mapped event ID:", mappedEventId)
       eventResult = await safeQuery(
         async () => sql`
           SELECT *
@@ -107,7 +114,8 @@ export async function GET(request: NextRequest) {
           WHERE id = ${mappedEventId}
           LIMIT 1
         `,
-        []
+        [],
+        "production-event-by-id"
       )
     } else {
       // Standard domain lookup
@@ -125,7 +133,8 @@ export async function GET(request: NextRequest) {
           ) = ${domain}
           LIMIT 1
         `,
-        []
+        [],
+        "standard-domain-lookup"
       )
     }
 
@@ -146,7 +155,8 @@ export async function GET(request: NextRequest) {
               WHERE id = '63c3a678-2a30-4777-93b4-4522095fe0aa'
               LIMIT 1
             `,
-            []
+            [],
+            "demo-event-fallback"
           )
           
           if (demoResult.length) {
@@ -162,7 +172,8 @@ export async function GET(request: NextRequest) {
                   WHERE event_id = ${eventData.id}
                   LIMIT 1
                 `,
-                []
+                [],
+                "demo-theme"
               )
               if (themeResult.length) {
                 theme = themeResult[0]
@@ -182,7 +193,8 @@ export async function GET(request: NextRequest) {
                   WHERE event_id = ${eventData.id}
                   ORDER BY price ASC
                 `,
-                []
+                [],
+                "demo-tickets"
               )
               
               const now = new Date()
@@ -195,7 +207,8 @@ export async function GET(request: NextRequest) {
                       WHERE ticket_id = ${ticket.id}
                       ORDER BY display_order ASC, start_date ASC NULLS LAST
                     `,
-                    []
+                    [],
+                    `demo-pricing-tiers-${ticket.id}`
                   )
                   
                   const pricingTiers = tiers.map((tier: any) => {
@@ -255,6 +268,7 @@ export async function GET(request: NextRequest) {
     )
 
     // Fetch theme
+    console.log("[v0] [by-domain] Fetching theme for event:", eventData.id)
     let theme = null
     try {
       const themeResult = await safeQuery(
@@ -264,7 +278,8 @@ export async function GET(request: NextRequest) {
           WHERE event_id = ${eventData.id}
           LIMIT 1
         `,
-        []
+        [],
+        "main-theme"
       )
 
       if (themeResult.length) {
@@ -275,6 +290,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch tickets + pricing tiers
+    console.log("[v0] [by-domain] Fetching tickets for event:", eventData.id)
     let tickets: any[] = []
 
     try {
@@ -286,7 +302,8 @@ export async function GET(request: NextRequest) {
           WHERE event_id = ${eventData.id}
           ORDER BY price ASC
         `,
-        []
+        [],
+        "main-tickets"
       )
 
       const now = new Date()
@@ -300,7 +317,8 @@ export async function GET(request: NextRequest) {
               WHERE ticket_id = ${ticket.id}
               ORDER BY display_order ASC, start_date ASC NULLS LAST
             `,
-            []
+            [],
+            `main-pricing-tiers-${ticket.id}`
           )
 
           const pricingTiers = tiers.map((tier: any) => {
@@ -330,6 +348,7 @@ export async function GET(request: NextRequest) {
       console.warn("[by-domain] Ticket lookup failed")
     }
 
+    console.log("[v0] [by-domain] Returning successful response for event:", eventData.event_name)
     return NextResponse.json({
       event: {
         ...eventData,
@@ -338,7 +357,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[by-domain] Fatal error:", error)
+    console.error("[v0] [by-domain] Fatal error:", error)
     return NextResponse.json(
       { error: "Failed to fetch event" },
       { status: 500 }
