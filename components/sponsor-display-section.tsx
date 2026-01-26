@@ -91,7 +91,7 @@ export function SponsorDisplaySection() {
         {/* Header with decorative lines */}
         <div className="flex items-center justify-center gap-4 mb-12">
           <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />
-          <h2 className="text-xl md:text-2xl font-bold text-center whitespace-nowrap tracking-wide">
+          <h2 className="text-lg md:text-2xl font-bold text-center tracking-wide">
             THE 17TH ANNUAL WRHT IS MADE POSSIBLE BY
           </h2>
           <div className="h-1 bg-blue-800 flex-grow max-w-[200px]" />

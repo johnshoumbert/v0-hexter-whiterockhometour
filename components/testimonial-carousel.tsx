@@ -83,20 +83,20 @@ export function TestimonialCarousel({ eventId, autoAdvanceInterval = 5 * 60 * 10
       <div className="space-y-8">
         {/* Testimonial Card */}
         <Card className="border-2 border-gray-900 min-h-96 flex flex-col justify-center">
-          <CardContent className="p-8">
-            <blockquote className="text-xl italic text-gray-700 mb-6 leading-relaxed">
+          <CardContent className="p-6 md:p-8">
+            <blockquote className="text-base md:text-xl italic text-gray-700 mb-6 leading-relaxed">
               "{current.quote}"
             </blockquote>
 
             {/* Author Info with Avatar */}
             <div className="flex items-center gap-4">
-              <Avatar className="w-14 h-14">
+              <Avatar className="w-12 md:w-14 h-12 md:h-14">
                 <AvatarImage src={current.author_avatar || ""} alt={current.author_name} />
                 <AvatarFallback className="text-lg">{current.author_name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-bold text-gray-900">{current.author_name}</div>
-                {current.author_title && <div className="text-sm text-gray-600">{current.author_title}</div>}
+                <div className="font-bold text-sm md:text-base text-gray-900">{current.author_name}</div>
+                {current.author_title && <div className="text-xs md:text-sm text-gray-600">{current.author_title}</div>}
               </div>
             </div>
           </CardContent>

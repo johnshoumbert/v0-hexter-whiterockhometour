@@ -172,7 +172,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Countdown Banner */}
-      <div className="bg-black text-white py-2 px-4 text-center text-sm tracking-wider">
+      <div className="bg-black text-white px-4 text-center text-sm tracking-wider mt-16 md:mt-0 py-2>
         THANK YOU FOR A GREAT 17TH YEAR, DALLAS!
       </div>
 
@@ -213,9 +213,9 @@ export default function HomePage() {
         </div>
 
         {/* Countdown Section */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm py-6 md:py-8 z-10">
+        <div className="absolute bottom-0 left-0 right-0 bg-black py-6 md:py-8 z-10">
           <div className="container mx-auto px-4">
-            <h3 className="text-xl md:text-2xl font-bold text-center mb-6 tracking-wide">
+            <h3 className="text-xl md:text-2xl font-bold text-center mb-6 tracking-wide text-white">
               COUNTDOWN TO THE 2026 WRHT
             </h3>
             <div className="flex justify-center items-center gap-4 md:gap-8 flex-wrap">
@@ -228,13 +228,13 @@ export default function HomePage() {
               ].map((item, index, arr) => (
                 <div key={item.label} className="flex items-center">
                   <div className="text-center">
-                    <div className="text-4xl md:text-5xl font-bold text-gray-900">
+                    <div className="text-4xl md:text-5xl font-bold text-white">
                       {String(item.value).padStart(2, "0")}
                     </div>
-                    <div className="text-xs md:text-sm text-gray-600 mt-1 font-medium">{item.label}</div>
+                    <div className="text-xs md:text-sm text-gray-300 mt-1 font-medium">{item.label}</div>
                   </div>
                   {index < arr.length - 1 && (
-                    <div className="text-3xl md:text-4xl font-bold text-gray-400 mx-2">:</div>
+                    <div className="text-3xl md:text-4xl font-bold text-gray-500 mx-2">:</div>
                   )}
                 </div>
               ))}
@@ -245,14 +245,6 @@ export default function HomePage() {
 
       {/* Ticket Status Section */}
       <TicketStatusSection />
-
-      {/* Testimonials Section */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-wide">
-          WHAT PEOPLE ARE SAYING ABOUT THE WRHT
-        </h2>
-        {event?.id && <TestimonialCarousel eventId={event.id} autoAdvanceInterval={5 * 60 * 1000} />}
-      </div>
 
       {/* Please Join Us Section */}
       <div className="grid md:grid-cols-2 gap-0 min-h-[600px]">
@@ -285,6 +277,14 @@ export default function HomePage() {
             backgroundImage: `url('https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/Hero-Join-1234-09XWkSY7OWOxq6M1CvOJALEnVHEfcH')`,
           }}
         />
+      </div>
+
+      {/* Testimonials Section */}
+      <div className="container mx-auto px-4 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-wide">
+          WHAT PEOPLE ARE SAYING ABOUT THE WRHT
+        </h2>
+        {event?.id && <TestimonialCarousel eventId={event.id} autoAdvanceInterval={5 * 60 * 1000} />}
       </div>
 
       {/* Sponsors Section */}
