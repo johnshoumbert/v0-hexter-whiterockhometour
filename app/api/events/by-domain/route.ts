@@ -13,6 +13,7 @@ async function safeQuery<T>(
   label: string,
   timeoutMs: number = 10000
 ): Promise<T> {
+  console.log(`[v0][by-domain] Starting query: ${label}`)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -25,10 +26,11 @@ async function safeQuery<T>(
         })
       })
     ])
+    console.log(`[v0][by-domain] Query completed: ${label}`)
     return result
   } catch (error: any) {
     const message = error?.message || String(error)
-    console.error(`[v0][DB ERROR][${label}]`, message)
+    console.error(`[v0][by-domain][DB ERROR][${label}]`, message)
 
     if (message.includes("429") || message.includes("Too Many Requests")) {
       throw new Error("RATE_LIMIT")
@@ -45,83 +47,123 @@ async function safeQuery<T>(
  */
 function invariant(condition: any, message: string): asserts condition {
   if (!condition) {
+    console.error(`[v0][by-domain] Invariant failed: ${message}`)
     throw new Error(message)
   }
 }
 
 export async function GET(request: NextRequest) {
-  console.log("[v0][by-domain] Request started")
+  console.log("[v0][by-domain] === Request started ===")
   
   try {
     /* ---------------------------------------------
      * Check database configuration first
      * --------------------------------------------- */
+    console.log("[v0][by-domain] Step 1: Checking database configuration")
     const dbUrl = process.env.NEON_DATABASE_URL ||
       process.env.NEON_POSTGRES_URL ||
       process.env.DATABASE_URL ||
       process.env.POSTGRES_URL
 
     if (!dbUrl) {
-      console.error("[v0] No database URL configured")
+      console.error("[v0][by-domain] No database URL configured")
       return NextResponse.json(
         { error: "Database not configured", details: "Missing database connection string" },
         { status: 503 }
       )
     }
+    console.log("[v0][by-domain] Database URL configured: Yes")
 
     /* ---------------------------------------------
      * Resolve host + domain
      * --------------------------------------------- */
-    const { searchParams } = new URL(request.url)
+    console.log("[v0][by-domain] Step 2: Resolving host and domain")
+    let rawHost: string | null = null
+    
+    try {
+      const url = new URL(request.url)
+      const searchParams = url.searchParams
+      rawHost = searchParams.get("host") || request.headers.get("host")
+      console.log("[v0][by-domain] Raw host resolved:", rawHost)
+    } catch (urlError) {
+      console.error("[v0][by-domain] URL parsing error:", urlError)
+      return NextResponse.json(
+        { error: "Invalid request URL", details: String(urlError) },
+        { status: 400 }
+      )
+    }
 
-    const rawHost =
-      searchParams.get("host") ||
-      request.headers.get("host")
+    if (!rawHost) {
+      console.error("[v0][by-domain] Missing Host header")
+      return NextResponse.json(
+        { error: "Missing Host header" },
+        { status: 400 }
+      )
+    }
 
-    invariant(rawHost, "Missing Host header")
+    let domain: string
+    try {
+      domain = normalizeDomain(rawHost)
+      console.log("[v0][by-domain] Normalized domain:", domain)
+    } catch (normalizeError) {
+      console.error("[v0][by-domain] Domain normalization error:", normalizeError)
+      return NextResponse.json(
+        { error: "Invalid domain", details: String(normalizeError) },
+        { status: 400 }
+      )
+    }
 
-    const domain = normalizeDomain(rawHost)
-
-    invariant(domain, "Normalized domain is empty")
-
-    console.log("[v0] Incoming domain:", domain)
-    console.log("[v0] Database URL configured:", dbUrl ? "Yes" : "No")
+    if (!domain) {
+      console.error("[v0][by-domain] Normalized domain is empty")
+      return NextResponse.json(
+        { error: "Normalized domain is empty" },
+        { status: 400 }
+      )
+    }
 
     const isPreview = domain.includes("vusercontent.net")
-    const isLocalhost =
-      domain === "localhost" ||
-      domain === "127.0.0.1"
+    const isLocalhost = domain === "localhost" || domain === "127.0.0.1"
+    console.log("[v0][by-domain] isPreview:", isPreview, "isLocalhost:", isLocalhost)
 
     /* ---------------------------------------------
      * Localhost handling
      * --------------------------------------------- */
     if (isLocalhost) {
-      const rows = await safeQuery(
-        () =>
-          sql`
-            SELECT *
-            FROM events
-            WHERE domain = 'localhost'
-              AND application_name = 'hometour'
-            LIMIT 1
-          `,
-        "localhost-event"
-      )
-
-      if (!rows.length) {
-        return NextResponse.json(
-          { error: "No localhost event configured" },
-          { status: 404 }
+      console.log("[v0][by-domain] Step 3: Localhost event lookup")
+      try {
+        const rows = await safeQuery(
+          () =>
+            sql`
+              SELECT *
+              FROM events
+              WHERE domain = 'localhost'
+                AND application_name = 'hometour'
+              LIMIT 1
+            `,
+          "localhost-event"
         )
-      }
 
-      return NextResponse.json({ event: rows[0] })
+        if (!rows.length) {
+          console.log("[v0][by-domain] No localhost event found")
+          return NextResponse.json(
+            { error: "No localhost event configured" },
+            { status: 404 }
+          )
+        }
+
+        console.log("[v0][by-domain] Localhost event found")
+        return NextResponse.json({ event: rows[0] })
+      } catch (localhostError) {
+        console.error("[v0][by-domain] Localhost query error:", localhostError)
+        throw localhostError
+      }
     }
 
     /* ---------------------------------------------
      * Main platform domain — no event
      * --------------------------------------------- */
     if (domain === "hometour.com") {
+      console.log("[v0][by-domain] Main platform domain - returning 404")
       return NextResponse.json(
         { error: "Main platform domain — no event" },
         { status: 404 }
@@ -131,35 +173,50 @@ export async function GET(request: NextRequest) {
     /* ---------------------------------------------
      * Domain override for preview links
      * --------------------------------------------- */
-    if (isPreview && searchParams.get("domain")) {
-      const override = normalizeDomain(searchParams.get("domain")!)
-      invariant(override, "Preview domain override invalid")
-      console.log("[v0] Preview override domain:", override)
+    if (isPreview) {
+      console.log("[v0][by-domain] Preview domain detected")
+      try {
+        const url = new URL(request.url)
+        const overrideDomain = url.searchParams.get("domain")
+        if (overrideDomain) {
+          const override = normalizeDomain(overrideDomain)
+          console.log("[v0][by-domain] Preview override domain:", override)
+        }
+      } catch (previewError) {
+        console.warn("[v0][by-domain] Preview domain parsing error:", previewError)
+      }
     }
 
     /* ---------------------------------------------
      * EVENT LOOKUP — exact match ONLY
      * --------------------------------------------- */
-    const eventRows = await safeQuery(
-      () =>
-        sql`
-          SELECT *
-          FROM events
-          WHERE application_name = 'hometour'
-            AND LOWER(
-              REGEXP_REPLACE(
-                REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-                '^www\\.',
-                ''
-              )
-            ) = ${domain}
-          LIMIT 1
-        `,
-      "event-lookup"
-    )
+    console.log("[v0][by-domain] Step 4: Event lookup for domain:", domain)
+    let eventRows: any[]
+    try {
+      eventRows = await safeQuery(
+        () =>
+          sql`
+            SELECT *
+            FROM events
+            WHERE application_name = 'hometour'
+              AND LOWER(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+                  '^www\\.',
+                  ''
+                )
+              ) = ${domain}
+            LIMIT 1
+          `,
+        "event-lookup"
+      )
+    } catch (eventLookupError) {
+      console.error("[v0][by-domain] Event lookup query error:", eventLookupError)
+      throw eventLookupError
+    }
 
     if (!eventRows.length) {
-      console.warn("[v0] Event not found for domain:", domain)
+      console.warn("[v0][by-domain] Event not found for domain:", domain)
       return NextResponse.json(
         { error: "Event not found" },
         { status: 404 }
@@ -168,13 +225,20 @@ export async function GET(request: NextRequest) {
 
     const eventData = eventRows[0]
 
-    invariant(eventData?.id, "Event missing ID")
+    if (!eventData?.id) {
+      console.error("[v0][by-domain] Event missing ID")
+      return NextResponse.json(
+        { error: "Event data invalid" },
+        { status: 500 }
+      )
+    }
 
-    console.log("[v0] Event found:", eventData.event_name)
+    console.log("[v0][by-domain] Event found:", eventData.event_name, "ID:", eventData.id)
 
     /* ---------------------------------------------
      * Theme lookup (optional)
      * --------------------------------------------- */
+    console.log("[v0][by-domain] Step 5: Theme lookup")
     let theme = null
 
     try {
@@ -191,14 +255,18 @@ export async function GET(request: NextRequest) {
 
       if (themeRows.length) {
         theme = themeRows[0]
+        console.log("[v0][by-domain] Theme found")
+      } else {
+        console.log("[v0][by-domain] No theme found")
       }
-    } catch (error) {
-      console.warn("[v0] Theme lookup failed:", error)
+    } catch (themeError) {
+      console.warn("[v0][by-domain] Theme lookup failed:", themeError)
     }
 
     /* ---------------------------------------------
      * Ticket + pricing tiers
      * --------------------------------------------- */
+    console.log("[v0][by-domain] Step 6: Ticket lookup")
     let tickets: any[] = []
 
     try {
@@ -213,12 +281,16 @@ export async function GET(request: NextRequest) {
           `,
         "tickets-lookup"
       )
+      console.log("[v0][by-domain] Found", ticketRows.length, "tickets")
 
       const now = new Date()
 
       tickets = await Promise.all(
         ticketRows.map(async (ticket: any) => {
-          invariant(ticket?.id, "Ticket missing ID")
+          if (!ticket?.id) {
+            console.warn("[v0][by-domain] Ticket missing ID, skipping")
+            return { ...ticket, pricingTiers: [] }
+          }
 
           try {
             const tiers = await safeQuery(
@@ -234,12 +306,8 @@ export async function GET(request: NextRequest) {
             )
 
             const pricingTiers = tiers.map((tier: any) => {
-              const start = tier.start_date
-                ? new Date(tier.start_date)
-                : null
-              const end = tier.end_date
-                ? new Date(tier.end_date)
-                : null
+              const start = tier.start_date ? new Date(tier.start_date) : null
+              const end = tier.end_date ? new Date(tier.end_date) : null
 
               return {
                 id: tier.id,
@@ -248,30 +316,25 @@ export async function GET(request: NextRequest) {
                 startDate: tier.start_date,
                 endDate: tier.end_date,
                 displayOrder: tier.display_order,
-                isActive:
-                  (!start || now >= start) &&
-                  (!end || now <= end),
+                isActive: (!start || now >= start) && (!end || now <= end),
               }
             })
 
             return { ...ticket, pricingTiers }
           } catch (tierError) {
-            console.error(
-              "[v0] Pricing tier failure for ticket:",
-              ticket.id,
-              tierError
-            )
+            console.error("[v0][by-domain] Pricing tier failure for ticket:", ticket.id, tierError)
             return { ...ticket, pricingTiers: [] }
           }
         })
       )
     } catch (ticketError) {
-      console.error("[v0] Ticket lookup failed:", ticketError)
+      console.error("[v0][by-domain] Ticket lookup failed:", ticketError)
     }
 
     /* ---------------------------------------------
      * Final response
      * --------------------------------------------- */
+    console.log("[v0][by-domain] === Request completed successfully ===")
     return NextResponse.json({
       event: {
         ...eventData,
@@ -280,7 +343,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error("[v0] Fatal handler error:", error)
+    console.error("[v0][by-domain] === Fatal handler error ===")
+    console.error("[v0][by-domain] Error name:", error?.name)
+    console.error("[v0][by-domain] Error message:", error?.message)
+    console.error("[v0][by-domain] Error stack:", error?.stack)
 
     if (error.message === "RATE_LIMIT") {
       return NextResponse.json(
@@ -292,7 +358,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to fetch event",
-        details: error.message,
+        details: error?.message || String(error),
       },
       { status: 500 }
     )
