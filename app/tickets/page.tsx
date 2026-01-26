@@ -71,10 +71,8 @@ export default function TicketsPage() {
           if (response.ok) {
             const data = await response.json()
             console.log("[v0] Shop items fetched:", data.items?.length || 0)
-            // Filter for featured items only
-            const featured = (data.items || []).filter((item: any) => item.featured)
-            console.log("[v0] Featured shop items:", featured.length)
-            setFeaturedShopItems(featured)
+            // Show all active shop items on tickets page
+            setFeaturedShopItems(data.items || [])
           }
         } catch (error) {
           console.error("[v0] Error fetching shop items:", error)

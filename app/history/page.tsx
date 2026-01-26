@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { ExternalLink, Home as HomeIcon } from 'lucide-react'
 
 interface HomeCard {
   id: number
@@ -15,6 +17,26 @@ interface HomeCard {
   description: string
   image: string
   directions: string
+}
+
+interface Event {
+  id: number
+  event_name: string
+  domain: string
+  start_date: string
+  end_date: string
+}
+
+interface Home {
+  id: number
+  event_id: number
+  name: string
+  address: string
+  sponsor?: string
+  short_description?: string
+  full_description?: string
+  item_images: string[]
+  directions_url?: string
 }
 
 const homesData: HomeCard[] = [
@@ -104,6 +126,65 @@ const historyTimeline = [
 
 export default function HistoryPage() {
   const [expandedHome, setExpandedHome] = useState<number | null>(null)
+  const [events, setEvents] = useState<Event[]>([])
+  const [eventHomes, setEventHomes] = useState<{ [key: number]: Home[] }>({})
+  const [loadingEvents, setLoadingEvents] = useState(true)
+  const [loadingHomes, setLoadingHomes] = useState<{ [key: number]: boolean }>({})
+
+  useEffect(() => {
+    fetchEvents()
+  }, [])
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/events')
+      const data = await response.json()
+      
+      // Filter events to only show previous years (not current year)
+      const currentYear = new Date().getFullYear()
+      const pastEvents = data.events.filter((event: Event) => {
+        const eventYear = new Date(event.start_date).getFullYear()
+        return eventYear < currentYear
+      })
+      
+      setEvents(pastEvents)
+    } catch (error) {
+      console.error('[v0] Error fetching events:', error)
+    } finally {
+      setLoadingEvents(false)
+    }
+  }
+
+  const fetchEventHomes = async (eventId: number) => {
+    if (eventHomes[eventId]) return // Already loaded
+
+    setLoadingHomes((prev) => ({ ...prev, [eventId]: true }))
+    try {
+      const response = await fetch(`/api/events/${eventId}/homes`)
+      const homes = await response.json()
+      setEventHomes((prev) => ({ ...prev, [eventId]: homes }))
+    } catch (error) {
+      console.error('[v0] Error fetching homes for event:', eventId, error)
+    } finally {
+      setLoadingHomes((prev) => ({ ...prev, [eventId]: false }))
+    }
+  }
+
+  const getEventYear = (event: Event) => {
+    return new Date(event.start_date).getFullYear()
+  }
+
+  const getEventDomain = (event: Event, homeId?: number) => {
+    // Extract the base domain pattern (e.g., "whiterock" from "whiterock-2025")
+    const baseDomain = event.domain.replace(/-\d{4}$/, '')
+    const year = getEventYear(event)
+    const domain = `${baseDomain}-${year}`
+    
+    if (homeId) {
+      return `https://${domain}.ourneighborhoodtour.com/homes/${homeId}`
+    }
+    return `https://${domain}.ourneighborhoodtour.com`
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -172,14 +253,138 @@ export default function HistoryPage() {
         </div>
       </section>
 
+      {/* Previous Years' Events Section */}
+      <section className="py-20 px-4 md:px-8 bg-slate-50">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-serif text-slate-900 mb-4 text-center">
+            Previous Year Events
+          </h2>
+          <p className="text-center text-slate-600 mb-12 text-lg">
+            Browse homes from previous White Rock Home Tours
+          </p>
+
+          {loadingEvents ? (
+            <div className="text-center py-12">
+              <p className="text-slate-600">Loading events...</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-slate-600">No previous events found.</p>
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full space-y-4">
+              {events.map((event) => {
+                const year = getEventYear(event)
+                const homes = eventHomes[event.id] || []
+                
+                return (
+                  <AccordionItem
+                    key={event.id}
+                    value={`event-${event.id}`}
+                    className="border rounded-lg bg-white shadow-sm"
+                  >
+                    <AccordionTrigger
+                      className="px-6 py-4 hover:no-underline"
+                      onClick={() => fetchEventHomes(event.id)}
+                    >
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="bg-amber-100 text-amber-900 font-bold text-lg px-4 py-2 rounded">
+                          {year}
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-serif text-slate-900">
+                            {event.event_name}
+                          </h3>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {new Date(event.start_date).toLocaleDateString('en-US', { 
+                              month: 'long', 
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      {loadingHomes[event.id] ? (
+                        <div className="text-center py-8">
+                          <p className="text-slate-600">Loading homes...</p>
+                        </div>
+                      ) : homes.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-slate-600">No homes found for this event.</p>
+                        </div>
+                      ) : (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                          {homes.map((home) => {
+                            const mainImage = home.item_images?.[0] || '/placeholder.svg?height=300&width=400'
+                            
+                            return (
+                              <Card key={home.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                                <div className="aspect-video bg-slate-200 relative">
+                                  <Image
+                                    src={mainImage}
+                                    alt={home.name || home.address}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                                <div className="p-4">
+                                  <h4 className="font-serif text-lg text-slate-900 mb-1">
+                                    {home.name || home.address}
+                                  </h4>
+                                  {home.address && home.name && (
+                                    <p className="text-sm text-slate-600 mb-2">{home.address}</p>
+                                  )}
+                                  {home.sponsor && (
+                                    <p className="text-xs text-slate-500 mb-3">
+                                      Sponsored by {home.sponsor}
+                                    </p>
+                                  )}
+                                  {home.short_description && (
+                                    <p className="text-sm text-slate-700 line-clamp-2 mb-3">
+                                      {home.short_description}
+                                    </p>
+                                  )}
+                                  <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full border-amber-700 text-amber-700 hover:bg-amber-50"
+                                  >
+                                    <a
+                                      href={getEventDomain(event, home.id)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center justify-center gap-2"
+                                    >
+                                      View Event
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  </Button>
+                                </div>
+                              </Card>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                )
+              })}
+            </Accordion>
+          )}
+        </div>
+      </section>
+
       {/* Featured Homes Section */}
       <section className="py-20 px-4 md:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl font-serif text-slate-900 mb-4 text-center">
-            Featured Homes
+            Featured Homes (2025)
           </h2>
           <p className="text-center text-slate-600 mb-16 text-lg">
-            Discover the magnificent homes that have been part of the White Rock Home Tour
+            Discover the magnificent homes featured in the current tour
           </p>
 
           <div className="grid md:grid-cols-2 gap-8">

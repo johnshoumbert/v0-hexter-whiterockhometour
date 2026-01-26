@@ -29,7 +29,7 @@ export function Footer() {
           <div className="flex justify-center">
             <div className="relative w-48 h-48">
               <Image
-                src="https://wrhometour.com/wp-content/uploads/2022/11/Hexter-Logo-Color.png"
+                src="https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/whiterockhometour/HexterPTSA.png"
                 alt="Hexter Elementary Logo"
                 fill
                 className="object-contain"
@@ -80,12 +80,12 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
             >
-              © 2026 Shoumbert Labs. All rights reserved.
+              © 2026 2025 17th Annual White Rock Home Tour. All content sole ownership of Hexter Elementary PTA. Site by Shoumbert Labs.
             </Link>
             
             <div className="flex items-center gap-6">
               <Link
-                href="https://www.facebook.com/"
+                href="https://www.facebook.com/WhiteRockHomeTour/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-gray-300 transition-colors"
@@ -94,7 +94,7 @@ export function Footer() {
                 <Facebook className="h-5 w-5" />
               </Link>
               <Link
-                href="https://www.instagram.com/"
+                href="https://www.instagram.com/whiterockhometour"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-gray-300 transition-colors"
