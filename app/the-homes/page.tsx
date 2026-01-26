@@ -173,7 +173,7 @@ export default function TheHomesPage() {
       {/* Hero Section */}
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         <Image
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image.png-kkrqBntcFJUXtRgBfIEWtOsbbkfNIF.jpeg"
+          src="/images/design-mode/image.png.jpeg"
           alt="The Homes"
           fill
           className="object-cover"
