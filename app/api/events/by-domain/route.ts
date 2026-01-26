@@ -188,30 +188,43 @@ export async function GET(request: NextRequest) {
     const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
     console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
 
+    // Explicit domain mapping for whiterock.ourneighborhoodtour.com
+    if (domain === 'whiterock.ourneighborhoodtour.com') {
+      console.log("[v0] Explicit domain mapping: whiterock.ourneighborhoodtour.com -> d42fcc36-3f53-4a65-982c-373776747c44")
+      const whiteRockEventId = 'd42fcc36-3f53-4a65-982c-373776747c44'
+      eventResult = await safeQuery(
+        async () => sql`SELECT * FROM events WHERE id = ${whiteRockEventId} LIMIT 1`,
+        []
+      )
+      console.log("[v0] Explicit mapping result count:", eventResult.length)
+    }
+
     // Determine application based on domain
     const isOurNeighborhoodTour = domain.includes('ourneighborhoodtour.com')
     const applicationName = isOurNeighborhoodTour ? 'hometour' : 'myschoolauction'
     console.log("[v0] Domain-based application filter:", applicationName)
 
-    console.log("[v0] Strategy 1: Trying exact match for:", domain)
-    eventResult = await safeQuery(
-      async () =>
-        sql`
-      SELECT *
-      FROM events
-      WHERE LOWER(
-        REGEXP_REPLACE(
-          REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
-          '^www\\.',
-          ''
-        )
-      ) = ${domain}
-      AND application_name = ${applicationName}
-      LIMIT 1
-    `,
-      [],
-    )
-    console.log("[v0] Strategy 1 result count:", eventResult.length)
+    if (eventResult.length === 0) {
+      console.log("[v0] Strategy 1: Trying exact match for:", domain)
+      eventResult = await safeQuery(
+        async () =>
+          sql`
+        SELECT *
+        FROM events
+        WHERE LOWER(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(TRIM(domain), '^https?://', ''),
+            '^www\\.',
+            ''
+          )
+        ) = ${domain}
+        AND application_name = ${applicationName}
+        LIMIT 1
+      `,
+        [],
+      )
+      console.log("[v0] Strategy 1 result count:", eventResult.length)
+    }
 
     // Strategy 2: If it's a Vercel app domain, try matching against the full vercel.app URL
     if (eventResult.length === 0 && domain.includes(".vercel.app")) {
