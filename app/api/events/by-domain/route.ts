@@ -188,11 +188,13 @@ export async function GET(request: NextRequest) {
     const allEvents = await safeQuery(async () => sql`SELECT id, event_name, domain FROM events`, [])
     console.log("[v0] All events in database:", JSON.stringify(allEvents, null, 2))
 
-    // Explicit domain mapping for whiterock.ourneighborhoodtour.com and whiterock-2025.ourneighborhoodtour.com
-    const isWhiteRockDomain = domain === 'whiterock.ourneighborhoodtour.com' || domain === 'whiterock-2025.ourneighborhoodtour.com'
+    // Explicit domain mapping for whiterock domains
+    const isWhiteRockDomain = domain === 'whiterock.ourneighborhoodtour.com' || 
+                              domain === 'whiterock-2025.ourneighborhoodtour.com' ||
+                              domain === 'whiterock-2026.ourneighborhoodtour.com'
     if (isWhiteRockDomain) {
-      console.log(`[v0] Explicit domain mapping: ${domain} -> d42fcc36-3f53-4a65-982c-373776747c44`)
-      const whiteRockEventId = 'd42fcc36-3f53-4a65-982c-373776747c44'
+      console.log(`[v0] Explicit domain mapping: ${domain} -> 06729964-bd81-4085-8195-e86e0350f85a`)
+      const whiteRockEventId = '06729964-bd81-4085-8195-e86e0350f85a'
       eventResult = await safeQuery(
         async () => sql`SELECT * FROM events WHERE id = ${whiteRockEventId} LIMIT 1`,
         []
