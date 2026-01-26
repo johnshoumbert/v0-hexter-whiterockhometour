@@ -35,7 +35,32 @@ export default function TourDetailsPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section with Split Layout */}
+      {/* Hero Image Header */}
+      <section className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+        {heroImage ? (
+          <Image
+            src={heroImage}
+            alt="Tour Details"
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full bg-muted" />
+        )}
+        
+        {/* Hero Text Overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 text-center px-4 uppercase tracking-wide">
+            The Details
+          </h1>
+          <p className="text-white text-lg md:text-xl italic text-center px-4 max-w-2xl">
+            Important information to help you plan your tour experience.
+          </p>
+        </div>
+      </section>
+
+      {/* Details Content Section */}
       <section className="relative">
         <div className="grid lg:grid-cols-2 min-h-[600px] lg:min-h-[800px]">
           {/* Left Side - Content */}
@@ -114,15 +139,14 @@ export default function TourDetailsPage() {
             </div>
           </div>
 
-          {/* Right Side - Hero Image */}
+          {/* Right Side - Content Image */}
           <div className="relative bg-muted">
             {heroImage ? (
               <Image
-                src={heroImage}
-                alt="Tour Details Hero"
+                src="https://ubsxwry7ayqkssqp.public.blob.vercel-storage.com/wrth-details-hero-ftxV0yRz3Xh5u0wqHzgWxtaEYb3fsM"
+                alt="Tour Interior"
                 fill
                 className="object-cover"
-                priority
               />
             ) : (
               <div className="w-full h-full bg-muted" />
