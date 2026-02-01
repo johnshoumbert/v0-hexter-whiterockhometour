@@ -45,6 +45,11 @@ export default function InteractiveTourMap() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const enableRecaptcha = process.env.NEXT_PUBLIC_ENABLE_TOUR_MAP_RECAPTCHA === "true"
 
+  useEffect(() => {
+    console.log("[v0] Google Maps API Key present:", !!apiKey)
+    console.log("[v0] reCAPTCHA enabled:", enableRecaptcha)
+  }, [])
+
   // Build Google Maps directions URL
   const buildGoogleMapsUrl = useCallback((homesList: Home[]) => {
     const homesWithAddresses = homesList.filter((h) => h.address)
@@ -114,15 +119,24 @@ export default function InteractiveTourMap() {
   // Initialize map
   const initializeMap = useCallback(
     (homesList: Home[]) => {
+      console.log("[v0] initializeMap called with", homesList.length, "homes")
+      console.log("[v0] mapRef.current:", !!mapRef.current)
+      console.log("[v0] window.google?.maps:", !!window.google?.maps)
+      console.log("[v0] isGoogleMapsLoaded:", isGoogleMapsLoaded)
+      
       if (!mapRef.current || !window.google?.maps || !isGoogleMapsLoaded) {
+        console.log("[v0] Map initialization failed - missing requirements")
         return
       }
 
       const homesWithCoords = homesList.filter(
         (h) => h.latitude && h.longitude
       )
+      console.log("[v0] Homes with coordinates:", homesWithCoords.length)
+      console.log("[v0] Home coordinates:", homesWithCoords.map(h => ({ id: h.id, lat: h.latitude, lng: h.longitude })))
 
       if (homesWithCoords.length === 0) {
+        console.log("[v0] No homes with coordinates to display")
         return
       }
 
@@ -133,6 +147,7 @@ export default function InteractiveTourMap() {
           new window.google.maps.LatLng(home.latitude!, home.longitude!)
         )
       })
+      console.log("[v0] Map bounds calculated:", bounds.getCenter().toString())
 
       // Create map
       const map = new window.google.maps.Map(mapRef.current, {
@@ -142,11 +157,14 @@ export default function InteractiveTourMap() {
         streetViewControl: true,
         fullscreenControl: true,
       })
+      console.log("[v0] Map instance created")
 
       mapInstanceRef.current = map
       map.fitBounds(bounds)
+      console.log("[v0] Map bounds fitted")
 
       // Add markers
+      console.log("[v0] Adding", homesWithCoords.length, "markers")
       homesWithCoords.forEach((home, index) => {
         const marker = new window.google.maps.Marker({
           position: { lat: home.latitude!, lng: home.longitude! },
@@ -159,6 +177,7 @@ export default function InteractiveTourMap() {
           },
           animation: window.google.maps.Animation.DROP,
         })
+        console.log("[v0] Marker added:", String.fromCharCode(65 + index), home.latitude, home.longitude)
 
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
@@ -180,6 +199,7 @@ export default function InteractiveTourMap() {
           infoWindow.open(map, marker)
         })
       })
+      console.log("[v0] All markers added successfully")
     },
     [isGoogleMapsLoaded]
   )
@@ -188,27 +208,36 @@ export default function InteractiveTourMap() {
   useEffect(() => {
     const fetchHomes = async () => {
       if (!event?.id) {
+        console.log("[v0] No event ID available")
         return
       }
 
       try {
+        console.log("[v0] Fetching homes for event:", event.id)
         setLoading(true)
         const response = await fetch(`/api/events/${event.id}/homes`)
 
         if (response.ok) {
           const data = await response.json()
+          console.log("[v0] Fetched homes data:", data)
           const sortedHomes = (Array.isArray(data) ? data : []).sort(
             (a: Home, b: Home) => a.display_order - b.display_order
           )
+          console.log("[v0] Sorted homes:", sortedHomes.length, "homes")
           
           // Geocode homes
           const geocodedHomes = await geocodeHomes(sortedHomes)
+          console.log("[v0] Geocoded homes:", geocodedHomes)
+          console.log("[v0] Homes with lat/lng:", geocodedHomes.filter(h => h.latitude && h.longitude).length)
           setHomes(geocodedHomes)
           setGoogleMapsUrl(buildGoogleMapsUrl(geocodedHomes))
 
           // Initialize map if Google Maps is already loaded
           if (isGoogleMapsLoaded) {
+            console.log("[v0] Google Maps already loaded, initializing map")
             initializeMap(geocodedHomes)
+          } else {
+            console.log("[v0] Google Maps not loaded yet")
           }
         }
       } catch (error) {
@@ -256,7 +285,11 @@ export default function InteractiveTourMap() {
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`}
         onLoad={() => {
+          console.log("[v0] Google Maps script loaded")
           setIsGoogleMapsLoaded(true)
+        }}
+        onError={(e) => {
+          console.error("[v0] Google Maps script failed to load:", e)
         }}
       />
 
