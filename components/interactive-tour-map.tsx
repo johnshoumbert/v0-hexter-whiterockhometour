@@ -313,59 +313,82 @@ export default function InteractiveTourMap() {
         </div>
 
         <div className="container mx-auto px-4 py-8">
+          {/* Information Banner */}
+          <div className="mb-8 bg-primary/10 border border-primary/20 rounded-lg p-6">
+            <p className="text-center text-lg font-medium text-primary">
+              Tour homes are open Saturday and Sunday from 12 to 5 pm., and can be visited in any order
+            </p>
+          </div>
+
           {/* Responsive Grid: flex-col on mobile, side-by-side on desktop */}
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Tour Stops Sidebar - Left */}
             <div className="w-full lg:w-80 space-y-6 flex-shrink-0">
               <div className="space-y-0">
-                {homes.map((home, index) => (
-                  <Link
-                    key={home.id}
-                    href={`/homes/${home.id}`}
-                    className="block group"
-                  >
-                    <div className="flex items-start gap-4 py-4 hover:bg-muted/50 rounded-lg px-3 transition-colors">
-                      {/* Marker with connecting line */}
-                      <div className="relative flex flex-col items-center pt-1 flex-shrink-0">
-                        {/* Connecting line (top) */}
-                        {index > 0 && (
-                          <div
-                            className="absolute -top-4 w-0.5 h-4 bg-primary/30"
-                            style={{
-                              backgroundImage:
-                                "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 3px, transparent 3px, transparent 6px)",
-                            }}
-                          />
-                        )}
+                {homes.map((home, index) => {
+                  const isRestroom = home.name?.toUpperCase() === "RESTROOM"
+                  
+                  return (
+                    <Link
+                      key={home.id}
+                      href={`/homes/${home.id}`}
+                      className="block group"
+                    >
+                      <div className={`flex items-start gap-4 py-4 rounded-lg px-3 transition-colors ${
+                        isRestroom ? "bg-black text-white hover:bg-black/90" : "hover:bg-muted/50"
+                      }`}>
+                        {/* Marker with connecting line */}
+                        <div className="relative flex flex-col items-center pt-1 flex-shrink-0">
+                          {/* Connecting line (top) */}
+                          {index > 0 && !isRestroom && (
+                            <div
+                              className="absolute -top-4 w-0.5 h-4 bg-primary/30"
+                              style={{
+                                backgroundImage:
+                                  "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 3px, transparent 3px, transparent 6px)",
+                              }}
+                            />
+                          )}
 
-                        {/* Marker */}
-                        <div className="relative z-10 w-10 h-10 rounded-full bg-background border-3 border-primary flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-primary">
-                            {String.fromCharCode(65 + index)}
-                          </span>
+                          {/* Marker - Show icon for restrooms, letter for homes */}
+                          {isRestroom ? (
+                            <div className="relative z-10 w-auto px-3 h-7 bg-black border-2 border-white flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                                RESTROOMS
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="relative z-10 w-10 h-10 rounded-full bg-background border-3 border-primary flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-bold text-primary">
+                                {String.fromCharCode(65 + index)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Connecting line (bottom) */}
+                          {index < homes.length - 1 && !isRestroom && (
+                            <div
+                              className="absolute -bottom-4 w-0.5 h-4 bg-primary/30"
+                              style={{
+                                backgroundImage:
+                                  "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 3px, transparent 3px, transparent 6px)",
+                              }}
+                            />
+                          )}
                         </div>
 
-                        {/* Connecting line (bottom) */}
-                        {index < homes.length - 1 && (
-                          <div
-                            className="absolute -bottom-4 w-0.5 h-4 bg-primary/30"
-                            style={{
-                              backgroundImage:
-                                "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 3px, transparent 3px, transparent 6px)",
-                            }}
-                          />
-                        )}
+                        {/* Address */}
+                        <div className="flex-1 min-w-0 pt-1">
+                          <p className={`font-semibold uppercase tracking-wide text-sm leading-tight transition-colors ${
+                            isRestroom ? "text-white" : "group-hover:text-primary"
+                          }`}>
+                            {home.address ? getShortAddress(home) : home.name}
+                          </p>
+                        </div>
                       </div>
-
-                      {/* Address */}
-                      <div className="flex-1 min-w-0 pt-1">
-                        <p className="font-semibold uppercase tracking-wide text-sm group-hover:text-primary transition-colors leading-tight">
-                          {home.address ? getShortAddress(home) : home.name}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </div>
 
               {/* Open in Google Maps Button */}
@@ -375,6 +398,41 @@ export default function InteractiveTourMap() {
                   Open in Google Maps
                 </Button>
               )}
+
+              {/* Restrooms Section */}
+              <Card className="bg-white">
+                <CardContent className="p-6">
+                  <h3 className="text-2xl font-bold mb-3 uppercase tracking-wide">Restrooms</h3>
+                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                    Restroom use for tour patrons has been offered by our friends at St. John's Episcopal Church
+                  </p>
+                  <div className="space-y-1">
+                    <p className="font-semibold">848 Harter Rd</p>
+                    <p className="text-muted-foreground">Dallas, TX 75218</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Refreshments Section */}
+              <Card className="bg-white">
+                <CardContent className="p-6">
+                  <h3 className="text-2xl font-bold mb-3 uppercase tracking-wide">Refreshments</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Tour patrons can visit our "Spirit Day Sponsors"
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-semibold">One90 Smoked Meats</p>
+                      <p className="text-sm text-muted-foreground">on Saturday</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Goodfriend Burger House</p>
+                      <p className="text-sm text-muted-foreground">on Sunday 6-10 pm</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground italic mt-2">Details on page 4.</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Map - Right */}
