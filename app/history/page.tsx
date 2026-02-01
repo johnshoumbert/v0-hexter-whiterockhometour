@@ -25,6 +25,7 @@ interface Event {
   domain: string
   start_date: string
   end_date: string
+  application?: string
 }
 
 interface Home {
@@ -140,11 +141,11 @@ export default function HistoryPage() {
       const response = await fetch('/api/events')
       const data = await response.json()
       
-      // Filter events to only show previous years (not current year)
+      // Filter events to only show previous years (not current year) and where application = 'hometour'
       const currentYear = new Date().getFullYear()
       const pastEvents = data.events.filter((event: Event) => {
         const eventYear = new Date(event.start_date).getFullYear()
-        return eventYear < currentYear
+        return eventYear < currentYear && event.application === 'hometour'
       })
       
       setEvents(pastEvents)
@@ -188,20 +189,115 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <section className="relative h-96 bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="text-center px-4">
-          <h1 className="text-5xl md:text-6xl font-serif text-slate-900 mb-4 text-balance">
-            Our History
+      {/* OUR STORY Hero Section */}
+      <section className="relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-black">
+        {/* Background Image */}
+        <Image
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-297OS6BaYG02CZGnaMs7ie5Jp7RcTj.png"
+          alt="White Rock Home Tour Story"
+          fill
+          className="object-cover opacity-40"
+          priority
+        />
+        
+        {/* Overlay Content */}
+        <div className="relative z-10 text-center px-4 text-white">
+          <h1 className="text-6xl md:text-7xl font-serif mb-4 text-balance">
+            OUR STORY
           </h1>
-          <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto text-balance">
-            Since 2006, the White Rock Home Tour has celebrated exceptional architecture and supported Hexter Elementary through showcasing magnificent modern homes.
+          <p className="text-2xl md:text-3xl font-serif italic text-amber-100">
+            Origins of the White Rock Home Tour
           </p>
         </div>
       </section>
 
-      {/* Timeline Section */}
+      {/* About the Tour Section */}
       <section className="py-20 px-4 md:px-8 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-4xl font-serif text-slate-900 mb-8 text-center">
+            About the Tour
+          </h2>
+          <div className="space-y-6">
+            <p className="text-lg text-slate-700 leading-relaxed">
+              The White Rock Home Tour was founded in 2006 as a fundraiser for Hexter Elementary (a public school in Dallas ISD) near White Rock Lake. Each year, the tour showcases magnificent mid-century and new modern homes, celebrating architectural excellence and the dedication of preservation-minded homeowners.
+            </p>
+            <p className="text-lg text-slate-700 leading-relaxed">
+              Our homes are thoughtfully curated to showcase diverse architectural styles, from iconic mid-century designs to contemporary modern creations. Each home tells a unique story of design excellence, craftsmanship, and the vision of talented architects and builders.
+            </p>
+            <p className="text-lg text-slate-700 leading-relaxed">
+              By participating in the tour, you support vital initiatives at Hexter Elementary and celebrate the architectural heritage that makes our community special.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Founder Quote Section */}
+      <section className="py-20 px-4 md:px-8 bg-slate-100">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-[1fr_1.2fr] gap-12 items-center">
+            {/* Image */}
+            <div className="relative h-96 md:h-full min-h-[400px]">
+              <Image
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-uuDKgUrMa7pGxmliJ1yzVZ9fhHmotv.png"
+                alt="Christine Rogers Founder"
+                fill
+                className="object-cover rounded-lg"
+              />
+            </div>
+            
+            {/* Quote */}
+            <div className="flex flex-col justify-center">
+              <blockquote className="space-y-6">
+                <p className="text-xl italic text-slate-800 leading-relaxed">
+                  "White Rock Home Tour was conceived in 2006 to celebrate the untold story of two up and coming Dallas architects from the 1950's whose mid-century modern home designs shaped the northeast side of White Rock Lake. The tour draws together a group of people who appreciate good design, who are drawn to White Rock Lake, and who support strong neighborhoods and the schools that serve them."
+                </p>
+                <div>
+                  <p className="text-lg font-serif font-bold text-slate-900">
+                    CHRISTINE ROGERS
+                  </p>
+                  <p className="text-slate-600">
+                    Founder, White Rock Home Tour
+                  </p>
+                </div>
+              </blockquote>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Our History - Detailed Section */}
+      <section className="py-20 px-4 md:px-8 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-5xl md:text-6xl font-serif text-slate-900 text-center mb-16 text-balance">
+            THE WHITE ROCK HOME TOUR WAS CONCEIVED BY A SMALL GROUP OF HEXTER ELEMENTARY PARENTS WHO WERE INTERESTED IN MID-CENTURY ARCHITECTURE.
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Left Column */}
+            <div className="space-y-6">
+              <p className="text-slate-700 leading-relaxed">
+                These industrious parents found a way to combine their love of modern design and passion for supporting their neighborhood school in Old Lake Highlands.
+              </p>
+              <p className="text-slate-700 leading-relaxed">
+                It was a fortunate coincidence that the Tour's founding parents were neighbors and lived on a lovely street graced with Ju-Nel homes. Designed by Lyle Rowley and Jack Wilson, the mid-century modern homes feature low horizontal flat roofs, open space, rather than traditional rooms, an appreciation of nature and a prominent use of glass, which leads to an abundance of natural light. The tour began as a showcase for the area's treasure trove of Ju-Nel Mid-Century Moderns (MCMs) and remains committed to providing tour-goers with access to some of the most interesting (and sometimes hidden) MCMs and new modern homes in the area.
+              </p>
+            </div>
+            
+            {/* Right Column */}
+            <div className="space-y-6">
+              <p className="text-slate-700 leading-relaxed">
+                As an added bonus to enjoying the area's most beautiful modern home design, tour-goers have the satisfaction of knowing that every dollar spent on the tour goes to the Hexter Elementary PTA. Like the modern homes showcased by the WRHT, Hexter is a true gem of a DISD school.
+              </p>
+              <p className="text-slate-700 leading-relaxed">
+                The school has won a coveted Blue Ribbon award and continues to be one of the highest performing elementary schools in the District and in Texas. The school serves a diverse population of students with a top-notch public education. Parent engagement at the school is exceptionally high and the White Rock Home Tour is one of our most significant fundraisers, allowing us to invest in needed campus improvements, technology and literacy. We love our school, and our WRHT, and are thankful to be a part of such a wonderful community that supports modern architecture and public education!
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Timeline Section */}
+      <section className="py-20 px-4 md:px-8 bg-slate-50">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-4xl font-serif text-slate-900 mb-16 text-center">
             Key Milestones
@@ -229,26 +325,6 @@ export default function HistoryPage() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* About the Tour Section */}
-      <section className="py-20 px-4 md:px-8 bg-slate-50">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-serif text-slate-900 mb-8 text-center">
-            About the Tour
-          </h2>
-          <div className="prose prose-lg max-w-none">
-            <p className="text-slate-700 leading-relaxed mb-6">
-              The White Rock Home Tour was founded in 2006 as a fundraiser for Hexter Elementary (a public school in Dallas ISD) near White Rock Lake. Each year, the tour showcases magnificent mid-century and new modern homes, celebrating architectural excellence and the dedication of preservation-minded homeowners.
-            </p>
-            <p className="text-slate-700 leading-relaxed mb-6">
-              Our homes are thoughtfully curated to showcase diverse architectural styles, from iconic mid-century designs to contemporary modern creations. Each home tells a unique story of design excellence, craftsmanship, and the vision of talented architects and builders.
-            </p>
-            <p className="text-slate-700 leading-relaxed">
-              By participating in the tour, you support vital initiatives at Hexter Elementary and celebrate the architectural heritage that makes our community special.
-            </p>
           </div>
         </div>
       </section>
@@ -377,86 +453,6 @@ export default function HistoryPage() {
         </div>
       </section>
 
-      {/* Featured Homes Section */}
-      <section className="py-20 px-4 md:px-8 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-serif text-slate-900 mb-4 text-center">
-            Featured Homes (2025)
-          </h2>
-          <p className="text-center text-slate-600 mb-16 text-lg">
-            Discover the magnificent homes featured in the current tour
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {homesData.map((home) => (
-              <Card
-                key={home.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setExpandedHome(expandedHome === home.id ? null : home.id)}
-              >
-                <div className="aspect-video bg-slate-200 relative overflow-hidden">
-                  <Image
-                    src={home.image}
-                    alt={home.address}
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-2xl font-serif text-slate-900">
-                      {home.address}
-                    </h3>
-                    <span className="text-sm font-semibold text-amber-700 bg-amber-50 px-3 py-1 rounded">
-                      {home.year}
-                    </span>
-                  </div>
-                  
-                  {home.sponsor && (
-                    <p className="text-sm text-slate-600 mb-4">
-                      Sponsored by{' '}
-                      {home.sponsorLink ? (
-                        <a href={home.sponsorLink} className="text-amber-700 hover:underline font-medium">
-                          {home.sponsor}
-                        </a>
-                      ) : (
-                        <span className="font-medium">{home.sponsor}</span>
-                      )}
-                    </p>
-                  )}
-
-                  <p className={`text-slate-700 leading-relaxed ${expandedHome !== home.id ? 'line-clamp-2' : ''}`}>
-                    {home.description}
-                  </p>
-
-                  <div className="mt-4 flex gap-3">
-                    {home.directions && (
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="flex-1 border-slate-300 hover:bg-slate-50"
-                      >
-                        <a href={home.directions}>Get Directions</a>
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setExpandedHome(expandedHome === home.id ? null : home.id)
-                      }}
-                      className="text-amber-700 hover:bg-amber-50"
-                    >
-                      {expandedHome === home.id ? 'Show Less' : 'Show More'}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 px-4 md:px-8 bg-gradient-to-br from-amber-900 to-amber-800 text-white">
         <div className="max-w-2xl mx-auto text-center">
@@ -476,7 +472,7 @@ export default function HistoryPage() {
             <Button
               asChild
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-amber-900"
+              className="border-white text-white hover:bg-amber-900"
             >
               <Link href="/contact">Learn More</Link>
             </Button>
