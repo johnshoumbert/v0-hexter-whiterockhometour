@@ -29,7 +29,6 @@ declare global {
   interface Window {
     google: any
     grecaptcha: any
-    onRecaptchaLoad: () => void
   }
 }
 
@@ -40,14 +39,11 @@ export default function InteractiveTourMap() {
   const [loading, setLoading] = useState(true)
   const [googleMapsUrl, setGoogleMapsUrl] = useState<string>("")
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false)
-  const [isRecaptchaVerified, setIsRecaptchaVerified] = useState(false)
-  const [isRecaptchaLoaded, setIsRecaptchaLoaded] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
-  const recaptchaRef = useRef<string | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const enableRecaptcha = process.env.NEXT_PUBLIC_ENABLE_TOUR_MAP_RECAPTCHA === "true"
 
   // Build Google Maps directions URL
   const buildGoogleMapsUrl = useCallback((homesList: Home[]) => {
@@ -65,28 +61,16 @@ export default function InteractiveTourMap() {
     return `https://www.google.com/maps/dir/${addresses.join("/")}`
   }, [])
 
-  // Geocode homes that don't have coordinates
+  // Geocode homes
   const geocodeHomes = useCallback(
     async (homesList: Home[]) => {
-      if (!isRecaptchaVerified || !recaptchaRef.current) {
-        console.log("[v0] Recaptcha not verified, skipping geocoding")
-        return homesList
-      }
-
       const homesNeedingGeocode = homesList.filter(
         (h) => h.address && (!h.latitude || !h.longitude)
       )
 
       if (homesNeedingGeocode.length === 0) {
-        console.log("[v0] All homes have coordinates")
         return homesList
       }
-
-      console.log(
-        "[v0] Geocoding",
-        homesNeedingGeocode.length,
-        "homes with reCAPTCHA token"
-      )
 
       try {
         const response = await fetch("/api/geocode", {
@@ -99,13 +83,11 @@ export default function InteractiveTourMap() {
                 .filter(Boolean)
                 .join(", "),
             })),
-            recaptchaToken: recaptchaRef.current,
           }),
         })
 
         if (response.ok) {
           const geocodedData = await response.json()
-          console.log("[v0] Geocoded homes:", geocodedData)
 
           // Merge geocoded data back into homes
           const updatedHomes = homesList.map((home) => {
@@ -119,14 +101,6 @@ export default function InteractiveTourMap() {
           })
 
           return updatedHomes
-        } else {
-          console.error("[v0] Geocoding failed:", await response.text())
-          // Reset recaptcha on failure
-          if (window.grecaptcha && recaptchaSiteKey) {
-            window.grecaptcha.reset()
-            setIsRecaptchaVerified(false)
-            recaptchaRef.current = null
-          }
         }
       } catch (error) {
         console.error("[v0] Error geocoding homes:", error)
@@ -134,14 +108,13 @@ export default function InteractiveTourMap() {
 
       return homesList
     },
-    [isRecaptchaVerified, recaptchaSiteKey]
+    []
   )
 
   // Initialize map
   const initializeMap = useCallback(
     (homesList: Home[]) => {
       if (!mapRef.current || !window.google?.maps || !isGoogleMapsLoaded) {
-        console.log("[v0] Cannot initialize map - prerequisites not met")
         return
       }
 
@@ -150,11 +123,8 @@ export default function InteractiveTourMap() {
       )
 
       if (homesWithCoords.length === 0) {
-        console.log("[v0] No homes with coordinates for map")
         return
       }
-
-      console.log("[v0] Initializing map with", homesWithCoords.length, "homes")
 
       // Calculate bounds
       const bounds = new window.google.maps.LatLngBounds()
@@ -183,7 +153,7 @@ export default function InteractiveTourMap() {
           map,
           title: home.name || home.address,
           label: {
-            text: String.fromCharCode(65 + index), // A, B, C...
+            text: String.fromCharCode(65 + index),
             color: "white",
             fontWeight: "bold",
           },
@@ -218,12 +188,10 @@ export default function InteractiveTourMap() {
   useEffect(() => {
     const fetchHomes = async () => {
       if (!event?.id) {
-        console.log("[v0] No event ID, skipping homes fetch")
         return
       }
 
       try {
-        console.log("[v0] Fetching homes for event:", event.id)
         setLoading(true)
         const response = await fetch(`/api/events/${event.id}/homes`)
 
@@ -232,17 +200,15 @@ export default function InteractiveTourMap() {
           const sortedHomes = (Array.isArray(data) ? data : []).sort(
             (a: Home, b: Home) => a.display_order - b.display_order
           )
-          console.log("[v0] Fetched homes:", sortedHomes.length)
-          setHomes(sortedHomes)
-          setGoogleMapsUrl(buildGoogleMapsUrl(sortedHomes))
+          
+          // Geocode homes
+          const geocodedHomes = await geocodeHomes(sortedHomes)
+          setHomes(geocodedHomes)
+          setGoogleMapsUrl(buildGoogleMapsUrl(geocodedHomes))
 
-          // If recaptcha is verified, geocode immediately
-          if (isRecaptchaVerified) {
-            const geocodedHomes = await geocodeHomes(sortedHomes)
-            setHomes(geocodedHomes)
-            if (isGoogleMapsLoaded) {
-              initializeMap(geocodedHomes)
-            }
+          // Initialize map if Google Maps is already loaded
+          if (isGoogleMapsLoaded) {
+            initializeMap(geocodedHomes)
           }
         }
       } catch (error) {
@@ -258,45 +224,14 @@ export default function InteractiveTourMap() {
     }
 
     fetchHomes()
-  }, [event?.id, toast, buildGoogleMapsUrl, isRecaptchaVerified])
-
-  // Handle recaptcha callback
-  const handleRecaptchaVerify = useCallback(
-    async (token: string) => {
-      console.log("[v0] reCAPTCHA verified, token received")
-      recaptchaRef.current = token
-      setIsRecaptchaVerified(true)
-
-      // Geocode homes if already loaded
-      if (homes.length > 0) {
-        const geocodedHomes = await geocodeHomes(homes)
-        setHomes(geocodedHomes)
-        if (isGoogleMapsLoaded) {
-          initializeMap(geocodedHomes)
-        }
-      }
-    },
-    [homes, geocodeHomes, isGoogleMapsLoaded, initializeMap]
-  )
-
-  // Setup recaptcha when loaded
-  useEffect(() => {
-    if (isRecaptchaLoaded && recaptchaSiteKey && window.grecaptcha) {
-      console.log("[v0] Rendering reCAPTCHA")
-      window.grecaptcha.render("recaptcha-container", {
-        sitekey: recaptchaSiteKey,
-        callback: handleRecaptchaVerify,
-      })
-    }
-  }, [isRecaptchaLoaded, recaptchaSiteKey, handleRecaptchaVerify])
+  }, [event?.id, toast, buildGoogleMapsUrl, geocodeHomes, isGoogleMapsLoaded, initializeMap])
 
   // Initialize map when both Google Maps and homes are ready
   useEffect(() => {
-    if (isGoogleMapsLoaded && homes.length > 0 && isRecaptchaVerified) {
-      console.log("[v0] Initializing map with loaded homes")
+    if (isGoogleMapsLoaded && homes.length > 0) {
       initializeMap(homes)
     }
-  }, [isGoogleMapsLoaded, homes, isRecaptchaVerified, initializeMap])
+  }, [isGoogleMapsLoaded, homes, initializeMap])
 
   const openInGoogleMaps = useCallback(() => {
     if (googleMapsUrl) {
@@ -321,15 +256,7 @@ export default function InteractiveTourMap() {
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`}
         onLoad={() => {
-          console.log("[v0] Google Maps API loaded")
           setIsGoogleMapsLoaded(true)
-        }}
-      />
-      <Script
-        src={`https://www.google.com/recaptcha/api.js`}
-        onLoad={() => {
-          console.log("[v0] reCAPTCHA loaded")
-          setIsRecaptchaLoaded(true)
         }}
       />
 
@@ -346,47 +273,53 @@ export default function InteractiveTourMap() {
         </div>
 
         <div className="container mx-auto px-4 py-8">
-          <div className="grid lg:grid-cols-[300px_1fr] gap-6">
-            {/* Tour Stops Sidebar */}
-            <div className="space-y-6 order-2 lg:order-1">
-              <div className="space-y-2">
+          {/* Responsive Grid: flex-col on mobile, side-by-side on desktop */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Tour Stops Sidebar - Left */}
+            <div className="w-full lg:w-80 space-y-6 flex-shrink-0">
+              <div className="space-y-0">
                 {homes.map((home, index) => (
                   <Link
                     key={home.id}
                     href={`/homes/${home.id}`}
                     className="block group"
                   >
-                    <div className="flex items-center gap-3 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors">
-                      <div className="relative flex flex-col items-center">
+                    <div className="flex items-start gap-4 py-4 hover:bg-muted/50 rounded-lg px-3 transition-colors">
+                      {/* Marker with connecting line */}
+                      <div className="relative flex flex-col items-center pt-1 flex-shrink-0">
+                        {/* Connecting line (top) */}
                         {index > 0 && (
                           <div
-                            className="absolute -top-3 w-0.5 h-3 bg-primary/30"
+                            className="absolute -top-4 w-0.5 h-4 bg-primary/30"
                             style={{
                               backgroundImage:
-                                "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 4px, transparent 4px, transparent 8px)",
+                                "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 3px, transparent 3px, transparent 6px)",
                             }}
                           />
                         )}
 
-                        <div className="relative z-10 w-10 h-10 rounded-full bg-background border-4 border-primary flex items-center justify-center flex-shrink-0">
-                          <span className="text-lg font-bold text-primary">
+                        {/* Marker */}
+                        <div className="relative z-10 w-10 h-10 rounded-full bg-background border-3 border-primary flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-primary">
                             {String.fromCharCode(65 + index)}
                           </span>
                         </div>
 
+                        {/* Connecting line (bottom) */}
                         {index < homes.length - 1 && (
                           <div
-                            className="absolute -bottom-3 w-0.5 h-3 bg-primary/30"
+                            className="absolute -bottom-4 w-0.5 h-4 bg-primary/30"
                             style={{
                               backgroundImage:
-                                "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 4px, transparent 4px, transparent 8px)",
+                                "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0, hsl(var(--primary)) 3px, transparent 3px, transparent 6px)",
                             }}
                           />
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-bold uppercase tracking-wide group-hover:text-primary transition-colors">
+                      {/* Address */}
+                      <div className="flex-1 min-w-0 pt-1">
+                        <p className="font-semibold uppercase tracking-wide text-sm group-hover:text-primary transition-colors leading-tight">
                           {home.address ? getShortAddress(home) : home.name}
                         </p>
                       </div>
@@ -395,29 +328,21 @@ export default function InteractiveTourMap() {
                 ))}
               </div>
 
+              {/* Open in Google Maps Button */}
               {googleMapsUrl && (
                 <Button onClick={openInGoogleMaps} className="w-full" size="lg">
-                  <Navigation className="mr-2 h-5 w-5" />
+                  <Navigation className="mr-2 h-4 w-4" />
                   Open in Google Maps
                 </Button>
               )}
             </div>
 
-            {/* Map */}
-            <div className="order-1 lg:order-2">
-              <Card>
-                <CardContent className="p-6">
-                  {!isRecaptchaVerified ? (
-                    <div className="flex flex-col items-center justify-center py-12 gap-6">
-                      <AlertCircle className="h-12 w-12 text-muted-foreground" />
-                      <p className="text-center text-muted-foreground mb-4">
-                        Please verify you're not a robot to view the interactive
-                        map
-                      </p>
-                      <div id="recaptcha-container"></div>
-                    </div>
-                  ) : !isGoogleMapsLoaded ? (
-                    <div className="h-[600px] lg:h-[800px] flex items-center justify-center">
+            {/* Map - Right */}
+            <div className="flex-1 min-w-0">
+              <Card className="h-full">
+                <CardContent className="p-0">
+                  {!isGoogleMapsLoaded ? (
+                    <div className="h-96 lg:h-[600px] flex items-center justify-center bg-muted rounded-lg">
                       <div className="text-center">
                         <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
                         <p className="text-muted-foreground">Loading map...</p>
@@ -425,7 +350,7 @@ export default function InteractiveTourMap() {
                     </div>
                   ) : homes.filter((h) => h.latitude && h.longitude).length ===
                     0 ? (
-                    <div className="h-[600px] lg:h-[800px] flex flex-col items-center justify-center gap-4">
+                    <div className="h-96 lg:h-[600px] flex flex-col items-center justify-center gap-4 bg-muted rounded-lg">
                       <AlertCircle className="h-12 w-12 text-muted-foreground" />
                       <p className="text-muted-foreground">
                         No homes with location data available
@@ -435,9 +360,9 @@ export default function InteractiveTourMap() {
                     <div>
                       <div
                         ref={mapRef}
-                        className="h-[600px] lg:h-[800px] w-full rounded-lg"
+                        className="h-96 lg:h-[600px] w-full rounded-lg"
                       />
-                      <p className="text-sm text-muted-foreground text-center mt-4">
+                      <p className="text-xs text-muted-foreground text-center mt-4 px-4 pb-4">
                         Click on markers to view home details
                       </p>
                     </div>
