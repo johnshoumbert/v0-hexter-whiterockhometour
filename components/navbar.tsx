@@ -19,6 +19,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ImageWithFallback } from "@/components/image-with-fallback"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter, usePathname } from "next/navigation"
 
 export function Navbar() {
@@ -40,6 +41,8 @@ export function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [recentMessages, setRecentMessages] = useState<any[]>([])
   const [showMessageDropdown, setShowMessageDropdown] = useState(false)
+  const [hasPurchases, setHasPurchases] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
   const { user, logout, isLoading, refreshUser } = useAuth()
   const { event, isMainDomain } = useEvent()
   const { getCartCount, setCartOpen } = useCartStore()
@@ -184,6 +187,22 @@ export function Navbar() {
     fetchShopStatus()
   }, [event?.id])
 
+  useEffect(() => {
+    const checkUserPurchases = async () => {
+      if (!user || !event?.id || isMainDomain) return
+      try {
+        const response = await fetch(`/api/events/${event.id}/user/has-purchases`)
+        if (response.ok) {
+          const data = await response.json()
+          setHasPurchases(data.hasPurchases || false)
+        }
+      } catch (error) {
+        console.error("[v0] Error checking user purchases:", error)
+      }
+    }
+    checkUserPurchases()
+  }, [user, event?.id, isMainDomain])
+
   const navLinks = isMainDomain
     ? [
         { href: "/", label: "Home" },
@@ -289,6 +308,19 @@ export function Navbar() {
                   {cartCount}
                 </span>
               </Button>
+            )}
+            {!isMainDomain && user && enableRegistration && (
+              <>
+                {hasPurchases ? (
+                  <Button variant="default" size="sm" onClick={() => setShowQRModal(true)}>
+                    View My Purchases
+                  </Button>
+                ) : (
+                  <Button variant="default" size="sm" asChild>
+                    <Link href="/tickets">Buy Your Tickets</Link>
+                  </Button>
+                )}
+              </>
             )}
             <div className="hidden md:block">
               <Button variant="ghost" size="icon" className="bg-transparent hover:bg-transparent" asChild>
@@ -437,11 +469,18 @@ export function Navbar() {
                             <DropdownMenuItem asChild>
                               <Link href="/user/profile">Profile</Link>
                             </DropdownMenuItem>
+                            {enableAuction && (
+                              <>
+                                <DropdownMenuItem asChild>
+                                  <Link href="/user/bids">My Bids</Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href="/user/wins">My Wins</Link>
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             <DropdownMenuItem asChild>
-                              <Link href="/user/bids">My Bids</Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href="/user/wins">My Wins</Link>
+                              <Link href="/user/purchases">My Purchases</Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href="/user/payments">Payments</Link>
@@ -656,22 +695,54 @@ export function Navbar() {
                               >
                                 Profile
                               </Link>
-                            
+                              {enableAuction && (
+                                <>
+                                  <Link
+                                    href="/user/bids"
+                                    className="text-sm text-muted-foreground"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                  >
+                                    My Bids
+                                  </Link>
+                                  <Link
+                                    href="/user/wins"
+                                    className="text-sm text-muted-foreground"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                  >
+                                    My Wins
+                                  </Link>
+                                </>
+                              )}
                               <Link
                                 href="/user/purchases"
                                 className="text-sm text-muted-foreground"
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
-                                My Orders
+                                My Purchases
                               </Link>
-                              <Link
-                                href="/user/purchases"
-                                prefetch={false}
-                                className="text-sm text-muted-foreground"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              >
-                                My Raffles
-                              </Link>
+
+                              {enableRegistration && (
+                                <div className="border-t pt-2 mt-2">
+                                  {hasPurchases ? (
+                                    <Button 
+                                      variant="default" 
+                                      className="w-full" 
+                                      onClick={() => {
+                                        setShowQRModal(true)
+                                        setIsMobileMenuOpen(false)
+                                      }}
+                                    >
+                                      View My Purchases
+                                    </Button>
+                                  ) : (
+                                    <Button variant="default" className="w-full" asChild>
+                                      <Link href="/tickets" onClick={() => setIsMobileMenuOpen(false)}>
+                                        Buy Your Tickets
+                                      </Link>
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
 
                               <div className="border-t pt-2 mt-2" />
                               <Link
@@ -731,6 +802,23 @@ export function Navbar() {
           </div>
         )}
       </div>
+
+      <Dialog open={showQRModal} onOpenChange={setShowQRModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>My Purchases</DialogTitle>
+            <DialogDescription>View all your tickets and purchases</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You can view all your tickets, shop orders, and raffle entries on your purchases page.
+            </p>
+            <Button asChild className="w-full" onClick={() => setShowQRModal(false)}>
+              <Link href="/user/purchases">View All Purchases</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </nav>
   )
 }
