@@ -195,6 +195,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         theme_text_color: eventData.theme_text_color || null,
         theme_bold_text_color: eventData.theme_bold_text_color || null,
         theme_mode: eventData.theme_mode || "not-set",
+        seo_title: eventData.seo_title || null,
+        seo_description: eventData.seo_description || null,
+        seo_og_title: eventData.seo_og_title || null,
+        seo_og_description: eventData.seo_og_description || null,
+        seo_og_image: eventData.seo_og_image || null,
+        seo_canonical_url: eventData.seo_canonical_url || null,
+        seo_no_index: eventData.seo_no_index || false,
         theme: themeData
           ? {
               primary_color: themeData.primary_color,
@@ -380,6 +387,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       theme_text_color: eventData.theme_text_color || null,
       theme_bold_text_color: eventData.theme_bold_text_color || null,
       theme_mode: eventData.theme_mode || "not-set",
+      seo_title: eventData.seo_title || null,
+      seo_description: eventData.seo_description || null,
+      seo_og_title: eventData.seo_og_title || null,
+      seo_og_description: eventData.seo_og_description || null,
+      seo_og_image: eventData.seo_og_image || null,
+      seo_canonical_url: eventData.seo_canonical_url || null,
+      seo_no_index: eventData.seo_no_index || false,
       theme: themeData
         ? {
             primary_color: themeData.primary_color,
@@ -498,6 +512,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       "theme_text_color",
       "theme_bold_text_color",
       "theme_mode",
+      "seo_title",
+      "seo_description",
+      "seo_og_title",
+      "seo_og_description",
+      "seo_og_image",
+      "seo_canonical_url",
+      "seo_no_index",
     ]
 
     for (const field of fieldNames) {

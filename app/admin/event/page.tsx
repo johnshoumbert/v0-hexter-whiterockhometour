@@ -76,6 +76,14 @@ interface EventSettings {
   theme_dark_bg_image?: string | null
   theme_dark_text_color?: string | null
   theme_dark_bold_text_color?: string | null
+  // SEO fields
+  seo_title?: string | null
+  seo_description?: string | null
+  seo_og_title?: string | null
+  seo_og_description?: string | null
+  seo_og_image?: string | null
+  seo_canonical_url?: string | null
+  seo_no_index?: boolean
 }
 
 interface FundingHeroSettings {
@@ -190,6 +198,13 @@ export default function AdminEventPage() {
           theme_dark_bg_image: eventData.theme_dark_bg_image || null,
           theme_dark_text_color: eventData.theme_dark_text_color || "#e5e5e5",
           theme_dark_bold_text_color: eventData.theme_dark_bold_text_color || "#ffffff",
+          seo_title: eventData.seo_title || null,
+          seo_description: eventData.seo_description || null,
+          seo_og_title: eventData.seo_og_title || null,
+          seo_og_description: eventData.seo_og_description || null,
+          seo_og_image: eventData.seo_og_image || null,
+          seo_canonical_url: eventData.seo_canonical_url || null,
+          seo_no_index: eventData.seo_no_index || false,
         })
         setOriginalDomain(eventData.domain || "")
       }
@@ -652,13 +667,14 @@ export default function AdminEventPage() {
         </div>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="media">Media</TabsTrigger>
             <TabsTrigger value="auction">Auction</TabsTrigger>
             <TabsTrigger value="payment">Payment</TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
             <TabsTrigger value="sections">Sections</TabsTrigger>
+            <TabsTrigger value="seo">SEO</TabsTrigger>
           </TabsList>
 
           {/* <TabsContent value="basic" className="space-y-4"> */}
@@ -2046,6 +2062,159 @@ export default function AdminEventPage() {
                   </Button>
                 </CardContent>
               )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="seo" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Engine Optimization (SEO)</CardTitle>
+                <CardDescription>
+                  Configure meta tags to control how your event appears in search engines and social media
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="seo_title">Page Title</Label>
+                    <Input
+                      id="seo_title"
+                      value={settings.seo_title || ""}
+                      onChange={(e) => setSettings({ ...settings, seo_title: e.target.value || null })}
+                      placeholder={`${settings.event_name || "Event"} - Official Event Site`}
+                      maxLength={60}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Appears in browser tabs and search results (recommended: 50-60 characters)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="seo_description">Meta Description</Label>
+                    <Textarea
+                      id="seo_description"
+                      value={settings.seo_description || ""}
+                      onChange={(e) => setSettings({ ...settings, seo_description: e.target.value || null })}
+                      placeholder="Brief description of your event for search engines..."
+                      rows={3}
+                      maxLength={160}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Appears in search results below the title (recommended: 150-160 characters)
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium">Social Media Preview</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Control how your event looks when shared on Facebook, Twitter, LinkedIn, etc.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="seo_og_title">Social Share Title</Label>
+                      <Input
+                        id="seo_og_title"
+                        value={settings.seo_og_title || ""}
+                        onChange={(e) => setSettings({ ...settings, seo_og_title: e.target.value || null })}
+                        placeholder={settings.seo_title || `${settings.event_name || "Event"}`}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave blank to use the page title above
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="seo_og_description">Social Share Description</Label>
+                      <Textarea
+                        id="seo_og_description"
+                        value={settings.seo_og_description || ""}
+                        onChange={(e) => setSettings({ ...settings, seo_og_description: e.target.value || null })}
+                        placeholder={settings.seo_description || "Brief description for social sharing..."}
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave blank to use the meta description above
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="seo_og_image">Social Share Image</Label>
+                      {settings.seo_og_image && (
+                        <div className="relative aspect-[1.91/1] w-full max-w-md overflow-hidden rounded-lg border">
+                          <img
+                            src={settings.seo_og_image || "/placeholder.svg"}
+                            alt="Social share preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <Input
+                        id="seo_og_image"
+                        value={settings.seo_og_image || ""}
+                        onChange={(e) => setSettings({ ...settings, seo_og_image: e.target.value || null })}
+                        placeholder={settings.hero_image_url || "https://example.com/image.jpg"}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Recommended size: 1200x630px. Leave blank to use hero image. Use full URL.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium">Advanced Settings</h3>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="seo_canonical_url">Canonical URL</Label>
+                      <Input
+                        id="seo_canonical_url"
+                        value={settings.seo_canonical_url || ""}
+                        onChange={(e) => setSettings({ ...settings, seo_canonical_url: e.target.value || null })}
+                        placeholder={`https://${settings.domain || "yourdomain.com"}`}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional: Specify the preferred URL for this page to avoid duplicate content issues
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="seo_no_index">Hide from Search Engines</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Prevent search engines from indexing this event page
+                        </p>
+                      </div>
+                      <Switch
+                        id="seo_no_index"
+                        checked={settings.seo_no_index || false}
+                        onCheckedChange={(checked) => setSettings({ ...settings, seo_no_index: checked })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg bg-muted p-4">
+                    <h4 className="font-medium mb-2">Preview in Google</h4>
+                    <div className="space-y-1">
+                      <div className="text-sm text-blue-600">
+                        {settings.seo_title || `${settings.event_name || "Event"} - Official Event Site`}
+                      </div>
+                      <div className="text-xs text-green-700">
+                        {settings.seo_canonical_url || settings.domain || "yourdomain.com"}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {settings.seo_description || "Brief description of your event..."}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
