@@ -25,6 +25,7 @@ interface Event {
   domain: string
   start_date: string
   end_date: string
+  application?: string
 }
 
 interface Home {
@@ -140,11 +141,11 @@ export default function HistoryPage() {
       const response = await fetch('/api/events')
       const data = await response.json()
       
-      // Filter events to only show previous years (not current year)
+      // Filter events to only show previous years (not current year) and where application = 'hometour'
       const currentYear = new Date().getFullYear()
       const pastEvents = data.events.filter((event: Event) => {
         const eventYear = new Date(event.start_date).getFullYear()
-        return eventYear < currentYear
+        return eventYear < currentYear && event.application === 'hometour'
       })
       
       setEvents(pastEvents)
@@ -377,86 +378,6 @@ export default function HistoryPage() {
         </div>
       </section>
 
-      {/* Featured Homes Section */}
-      <section className="py-20 px-4 md:px-8 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-serif text-slate-900 mb-4 text-center">
-            Featured Homes (2025)
-          </h2>
-          <p className="text-center text-slate-600 mb-16 text-lg">
-            Discover the magnificent homes featured in the current tour
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {homesData.map((home) => (
-              <Card
-                key={home.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setExpandedHome(expandedHome === home.id ? null : home.id)}
-              >
-                <div className="aspect-video bg-slate-200 relative overflow-hidden">
-                  <Image
-                    src={home.image}
-                    alt={home.address}
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-2xl font-serif text-slate-900">
-                      {home.address}
-                    </h3>
-                    <span className="text-sm font-semibold text-amber-700 bg-amber-50 px-3 py-1 rounded">
-                      {home.year}
-                    </span>
-                  </div>
-                  
-                  {home.sponsor && (
-                    <p className="text-sm text-slate-600 mb-4">
-                      Sponsored by{' '}
-                      {home.sponsorLink ? (
-                        <a href={home.sponsorLink} className="text-amber-700 hover:underline font-medium">
-                          {home.sponsor}
-                        </a>
-                      ) : (
-                        <span className="font-medium">{home.sponsor}</span>
-                      )}
-                    </p>
-                  )}
-
-                  <p className={`text-slate-700 leading-relaxed ${expandedHome !== home.id ? 'line-clamp-2' : ''}`}>
-                    {home.description}
-                  </p>
-
-                  <div className="mt-4 flex gap-3">
-                    {home.directions && (
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="flex-1 border-slate-300 hover:bg-slate-50"
-                      >
-                        <a href={home.directions}>Get Directions</a>
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setExpandedHome(expandedHome === home.id ? null : home.id)
-                      }}
-                      className="text-amber-700 hover:bg-amber-50"
-                    >
-                      {expandedHome === home.id ? 'Show Less' : 'Show More'}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 px-4 md:px-8 bg-gradient-to-br from-amber-900 to-amber-800 text-white">
         <div className="max-w-2xl mx-auto text-center">
@@ -476,7 +397,7 @@ export default function HistoryPage() {
             <Button
               asChild
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-amber-900"
+              className="border-white text-white hover:bg-amber-900"
             >
               <Link href="/contact">Learn More</Link>
             </Button>
