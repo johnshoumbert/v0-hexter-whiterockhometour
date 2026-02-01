@@ -133,7 +133,7 @@ export default function InteractiveTourMap() {
         (h) => h.latitude && h.longitude
       )
       console.log("[v0] Homes with coordinates:", homesWithCoords.length)
-      console.log("[v0] Home coordinates:", homesWithCoords.map(h => ({ id: h.id, lat: h.latitude, lng: h.longitude })))
+      console.log("[v0] Home coordinates:", homesWithCoords.map(h => ({ id: h.id, lat: h.latitude, lng: h.longitude, types: typeof h.latitude, typeof: typeof h.longitude })))
 
       if (homesWithCoords.length === 0) {
         console.log("[v0] No homes with coordinates to display")
@@ -143,8 +143,11 @@ export default function InteractiveTourMap() {
       // Calculate bounds
       const bounds = new window.google.maps.LatLngBounds()
       homesWithCoords.forEach((home) => {
+        // Convert to numbers in case they're strings
+        const lat = typeof home.latitude === 'string' ? parseFloat(home.latitude) : home.latitude!
+        const lng = typeof home.longitude === 'string' ? parseFloat(home.longitude) : home.longitude!
         bounds.extend(
-          new window.google.maps.LatLng(home.latitude!, home.longitude!)
+          new window.google.maps.LatLng(lat, lng)
         )
       })
       console.log("[v0] Map bounds calculated:", bounds.getCenter().toString())
@@ -166,8 +169,12 @@ export default function InteractiveTourMap() {
       // Add markers
       console.log("[v0] Adding", homesWithCoords.length, "markers")
       homesWithCoords.forEach((home, index) => {
+        // Convert to numbers in case they're strings
+        const lat = typeof home.latitude === 'string' ? parseFloat(home.latitude) : home.latitude!
+        const lng = typeof home.longitude === 'string' ? parseFloat(home.longitude) : home.longitude!
+        
         const marker = new window.google.maps.Marker({
-          position: { lat: home.latitude!, lng: home.longitude! },
+          position: { lat, lng },
           map,
           title: home.name || home.address,
           label: {
@@ -177,7 +184,7 @@ export default function InteractiveTourMap() {
           },
           animation: window.google.maps.Animation.DROP,
         })
-        console.log("[v0] Marker added:", String.fromCharCode(65 + index), home.latitude, home.longitude)
+        console.log("[v0] Marker added:", String.fromCharCode(65 + index), lat, lng)
 
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
